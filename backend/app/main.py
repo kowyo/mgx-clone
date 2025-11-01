@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.routes import api_router, ws_router
 from app.services.project_service import project_manager
+
+load_dotenv()
 
 
 @asynccontextmanager
