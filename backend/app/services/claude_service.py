@@ -61,7 +61,8 @@ class ClaudeService:
         base_intro = (
             "You are Claude, an expert full-stack engineer. "
             "Follow best practices, structure the project cleanly, "
-            "and ensure the app runs with pnpm."
+            "and ensure the app runs with pnpm. "
+            "Always include a complete package.json with install and build scripts."
         )
         if template:
             return (

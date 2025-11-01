@@ -65,12 +65,22 @@ async def get_project_file_content(
     except ProjectNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
-    preview_root = project.project_dir / "generated-app"
+    preview_root = (project.project_dir / "generated-app").resolve()
 
     try:
         absolute = resolve_project_path(preview_root, file_path)
     except PathValidationError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    try:
+        relative = absolute.relative_to(preview_root)
+    except ValueError as exc:  # pragma: no cover - defensive guard for symlinked tmp dirs
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found",
+        ) from exc
+    if "node_modules" in relative.parts:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
 
     if not await asyncio.to_thread(absolute.exists):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
@@ -108,12 +118,22 @@ async def fetch_preview_asset(
     except ProjectNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
-    preview_root = project.project_dir / "generated-app"
+    preview_root = (project.project_dir / "generated-app").resolve()
 
     try:
         full_path = resolve_project_path(preview_root, asset_path or "index.html")
     except PathValidationError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    try:
+        relative = full_path.relative_to(preview_root)
+    except ValueError as exc:  # pragma: no cover - defensive guard
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Asset not found",
+        ) from exc
+    if "node_modules" in relative.parts:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
 
     if not await asyncio.to_thread(full_path.exists):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")

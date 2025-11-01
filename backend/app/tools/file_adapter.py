@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -60,19 +61,47 @@ class FileAdapter:
         if not target.is_dir():
             raise PathValidationError(f"Path '{relative_path or '.'}' is not a directory")
 
+        skip_dirs = {"node_modules", ".pnpm", ".git"}
+
         def _collect() -> list[DirectoryListingEntry]:
             entries: list[DirectoryListingEntry] = []
-            for path in target.rglob("*"):
-                relative = path.relative_to(self._base_dir)
-                stat_result = path.stat()
-                entries.append(
-                    DirectoryListingEntry(
-                        path=str(relative),
-                        is_dir=path.is_dir(),
-                        size=stat_result.st_size if path.is_file() else None,
-                        updated_at=datetime.fromtimestamp(stat_result.st_mtime, UTC),
+            for dirpath, dirnames, filenames in os.walk(target, topdown=True):
+                current_dir = Path(dirpath)
+                relative_dir = current_dir.relative_to(self._base_dir)
+                if relative_dir.parts and any(part in skip_dirs for part in relative_dir.parts):
+                    dirnames[:] = []
+                    continue
+
+                dirnames[:] = [name for name in dirnames if name not in skip_dirs]
+
+                for dirname in dirnames:
+                    directory_path = current_dir / dirname
+                    relative = directory_path.relative_to(self._base_dir)
+                    stat_result = directory_path.stat()
+                    entries.append(
+                        DirectoryListingEntry(
+                            path=str(relative),
+                            is_dir=True,
+                            size=None,
+                            updated_at=datetime.fromtimestamp(stat_result.st_mtime, UTC),
+                        )
                     )
-                )
+
+                for filename in filenames:
+                    file_path = current_dir / filename
+                    relative = file_path.relative_to(self._base_dir)
+                    if any(part in skip_dirs for part in relative.parts):
+                        continue
+                    stat_result = file_path.stat()
+                    entries.append(
+                        DirectoryListingEntry(
+                            path=str(relative),
+                            is_dir=False,
+                            size=stat_result.st_size,
+                            updated_at=datetime.fromtimestamp(stat_result.st_mtime, UTC),
+                        )
+                    )
+
             entries.sort(key=lambda entry: entry.path)
             return entries
 
