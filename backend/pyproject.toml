@@ -50,3 +50,6 @@ packages = ["app"]
 
 [tool.hatch.build.targets.sdist]
 include = ["app", "pyproject.toml"]
+
+[tool.uv.dependency-groups]
+dev = { optional-dependencies = ["dev"] }
