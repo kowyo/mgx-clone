@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import mimetypes
+import re
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -20,6 +22,100 @@ from app.tools.path_utils import resolve_project_path
 ProjectManagerDep = Annotated[ProjectManager, Depends(get_project_manager)]
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+
+ASSET_FALLBACK_SUFFIXES = {
+    ".css",
+    ".js",
+    ".mjs",
+    ".map",
+    ".json",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".svg",
+    ".ico",
+    ".webp",
+    ".gif",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".otf",
+}
+
+
+def _asset_fallback_path(relative: Path) -> Path | None:
+    """Return alternate asset location when builds keep hashed files in /assets."""
+
+    if not relative.name:
+        return None
+
+    suffix = relative.suffix.lower()
+    if suffix not in ASSET_FALLBACK_SUFFIXES:
+        return None
+
+    if "assets" in relative.parts:
+        return None
+
+    parent = relative.parent
+    candidate = parent / "assets" / relative.name
+    return candidate
+
+
+_HTML_ABSOLUTE_REF_PATTERN = re.compile(
+    r"(?P<prefix>(?:src|href|poster|data)=['\"])(?P<path>/[^'\"]*)",
+    flags=re.IGNORECASE,
+)
+
+
+HTML_REWRITE_SUFFIXES = {
+    ".css",
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".map",
+    ".json",
+    ".ico",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".svg",
+    ".gif",
+    ".webp",
+    ".avif",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".otf",
+    ".eot",
+    ".wasm",
+    ".xml",
+    ".txt",
+    ".webmanifest",
+}
+
+
+def _rewrite_preview_html(document: str) -> str:
+    """Rewrite absolute asset references to relative ones for iframe previews."""
+
+    def _replace(match: re.Match[str]) -> str:
+        path = match.group("path")
+        if not path or path.startswith("//"):
+            return match.group(0)
+        stripped = path.lstrip("/")
+        if not stripped:
+            return match.group(0)
+        core = stripped.split("?", 1)[0].split("#", 1)[0]
+        suffix = Path(core).suffix.lower()
+        if suffix not in HTML_REWRITE_SUFFIXES:
+            return match.group(0)
+        return f"{match.group('prefix')}./{stripped}"
+
+    # Fast exit when no absolute references are present.
+    if "\"/" not in document and "'/" not in document:
+        return document
+
+    return _HTML_ABSOLUTE_REF_PATTERN.sub(_replace, document)
 
 
 @router.get("/{project_id}/status", response_model=ProjectStatusResponse)
@@ -121,28 +217,62 @@ async def fetch_preview_asset(
     preview_root = (project.project_dir / "generated-app").resolve()
 
     try:
-        full_path = resolve_project_path(preview_root, asset_path or "index.html")
+        requested_path = resolve_project_path(preview_root, asset_path or "index.html")
     except PathValidationError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     try:
-        relative = full_path.relative_to(preview_root)
+        requested_relative = requested_path.relative_to(preview_root)
     except ValueError as exc:  # pragma: no cover - defensive guard
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Asset not found",
         ) from exc
-    if "node_modules" in relative.parts:
+
+    candidate_paths: list[tuple[Path, Path]] = [(requested_path, requested_relative)]
+
+    fallback_relative = _asset_fallback_path(requested_relative)
+    if fallback_relative is not None:
+        try:
+            fallback_path = resolve_project_path(preview_root, fallback_relative.as_posix())
+        except PathValidationError:
+            fallback_path = None
+        else:
+            try:
+                fallback_relative = fallback_path.relative_to(preview_root)
+            except ValueError:
+                fallback_path = None
+        if fallback_path is not None:
+            candidate_paths.append((fallback_path, fallback_relative))
+
+    selected_path: Path | None = None
+    selected_relative: Path | None = None
+    for candidate_full, candidate_relative in candidate_paths:
+        if "node_modules" in candidate_relative.parts:
+            continue
+        exists = await asyncio.to_thread(candidate_full.exists)
+        if not exists:
+            continue
+        selected_path = candidate_full
+        selected_relative = candidate_relative
+        break
+
+    if selected_path is None or selected_relative is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
 
-    if not await asyncio.to_thread(full_path.exists):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Asset not found")
-    if full_path.is_dir():
+    is_directory = await asyncio.to_thread(selected_path.is_dir)
+    if is_directory:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Cannot serve directory",
         )
 
-    content = await asyncio.to_thread(full_path.read_bytes)
-    media_type = mimetypes.guess_type(full_path.name)[0] or "application/octet-stream"
+    media_type = mimetypes.guess_type(selected_path.name)[0] or "application/octet-stream"
+
+    if selected_path.suffix.lower() == ".html":
+        text = await asyncio.to_thread(selected_path.read_text, encoding="utf-8")
+        rewritten = _rewrite_preview_html(text)
+        return Response(rewritten.encode("utf-8"), media_type=media_type)
+
+    content = await asyncio.to_thread(selected_path.read_bytes)
     return Response(content, media_type=media_type)

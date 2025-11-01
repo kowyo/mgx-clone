@@ -62,7 +62,8 @@ class ClaudeService:
             "You are Claude, an expert full-stack engineer. "
             "Follow best practices, structure the project cleanly, "
             "and ensure the app runs with pnpm. "
-            "Always include a complete package.json with install and build scripts."
+            "Always include a complete package.json with dev/build scripts appropriate for pnpm, "
+            "and do not add a custom 'install' script; pnpm handles installs automatically."
         )
         if template:
             return (
