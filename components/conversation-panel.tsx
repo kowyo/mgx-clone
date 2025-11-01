@@ -1,18 +1,21 @@
 "use client"
 
-import { FormEvent, KeyboardEvent, useMemo } from "react"
+import { FormEvent, ChangeEvent, useMemo } from "react"
 import { ConversationMessage, LogEntry } from "@/hooks/use-generation-session"
 import { cn } from "@/lib/utils"
 import { Card } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
+import {
+  PromptInput,
+  PromptInputTextarea,
+  PromptInputToolbar,
+  PromptInputSubmit,
+} from "@/components/ui/shadcn-io/ai/prompt-input"
 import {
   CheckCircle2,
   Info,
   Loader2,
-  Send,
   Sparkles,
   UserRound,
   XCircle,
@@ -47,13 +50,6 @@ export function ConversationPanel({
     void onSubmit()
   }
 
-  const handleComposerKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-      event.preventDefault()
-      void onSubmit()
-    }
-  }
-
   return (
     <Card className="flex h-full min-h-[520px] flex-col overflow-hidden">
       <ScrollArea className="flex-1 px-6 py-4">
@@ -74,32 +70,24 @@ export function ConversationPanel({
         )}
       </ScrollArea>
 
-      <footer className="border-t border-border bg-card/80 px-6 py-4">
-        <form onSubmit={handleSubmit} className="space-y-3">
-          <Textarea
+      <footer className="border-t border-none p-1">
+        <PromptInput onSubmit={handleSubmit}>
+          <PromptInputTextarea
             value={prompt}
-            onChange={(event) => onPromptChange(event.target.value)}
-            onKeyDown={handleComposerKeyDown}
-            placeholder="Explain the app you want. Press ⌘ + Enter to send."
+            onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onPromptChange(event.target.value)}
+            placeholder="Explain the app you want. Press Enter to send."
             disabled={isGenerating}
-            className="min-h-[120px] resize-none text-sm"
           />
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">Use Shift + Enter for a new line.</p>
-            <div className="flex items-center gap-2">
-              {isGenerating && (
-                <Badge variant="secondary" className="gap-1">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Generating
-                </Badge>
-              )}
-              <Button type="submit" disabled={disableSend} className="gap-2">
-                <Send className="h-4 w-4" />
-                Send
-              </Button>
-            </div>
-          </div>
-        </form>
+          <PromptInputToolbar>
+            {isGenerating && (
+              <Badge variant="secondary" className="gap-1 mr-auto">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Generating
+              </Badge>
+            )}
+            <PromptInputSubmit disabled={disableSend} />
+          </PromptInputToolbar>
+        </PromptInput>
       </footer>
 
       <div className="border-t border-border bg-muted/30 px-6 py-4">
