@@ -33,15 +33,13 @@ export default function Home() {
     <div className="flex min-h-screen flex-col bg-background">
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-border bg-card/95 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary shadow-sm">
-              <Code2 className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div>
-              <p className="text-base font-semibold text-foreground">MGX Studio</p>
-              <p className="text-xs text-muted-foreground">Craft and iterate AI-generated apps instantly</p>
-            </div>
+        <div className="flex h-16 w-full items-center gap-3 px-6">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary shadow-sm">
+            <Code2 className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <div>
+            <p className="text-base font-semibold text-foreground">MGX Studio</p>
+            <p className="text-xs text-muted-foreground">Craft and iterate AI-generated apps instantly</p>
           </div>
         </div>
       </header>
