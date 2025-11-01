@@ -497,8 +497,8 @@ export default function Home() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <Code2 className="h-5 w-5 text-primary-foreground" />
               </div>
-              <h1 className="text-xl font-semibold text-foreground">Lovable MVP</h1>
-              <span className="text-sm text-muted-foreground">AI App Builder</span>
+              <h1 className="text-xl font-semibold text-foreground">MGX</h1>
+              <span className="text-sm text-muted-foreground">Best AI code generator</span>
             </div>
           </div>
         </div>
