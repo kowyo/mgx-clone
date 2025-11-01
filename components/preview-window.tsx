@@ -26,11 +26,6 @@ export function PreviewWindow({ url, onRefresh }: PreviewWindowProps) {
       {/* Preview Toolbar */}
       <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 py-2">
         <div className="flex items-center gap-2">
-          <div className="flex gap-1.5">
-            <div className="h-3 w-3 rounded-full bg-red-500" />
-            <div className="h-3 w-3 rounded-full bg-yellow-500" />
-            <div className="h-3 w-3 rounded-full bg-green-500" />
-          </div>
           <span className="ml-3 font-mono text-xs text-muted-foreground">{url}</span>
         </div>
         <div className="flex gap-2">
@@ -38,7 +33,12 @@ export function PreviewWindow({ url, onRefresh }: PreviewWindowProps) {
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Button size="sm" variant="ghost" asChild>
-            <a href={url} target="_blank" rel="noopener noreferrer">
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1"
+            >
               <ExternalLink className="h-4 w-4" />
             </a>
           </Button>
