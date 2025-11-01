@@ -2,7 +2,6 @@
 name = "claude-app-builder-backend"
 version = "0.1.0"
 description = "FastAPI backend for the Claude-powered web application builder"
-readme = "../planning.md"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.111.0",
@@ -50,6 +49,3 @@ packages = ["app"]
 
 [tool.hatch.build.targets.sdist]
 include = ["app", "pyproject.toml"]
-
-[tool.uv.dependency-groups]
-dev = { optional-dependencies = ["dev"] }
