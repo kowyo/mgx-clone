@@ -5,6 +5,7 @@ from collections import deque
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import uuid4
 
 from app.config import settings
@@ -15,6 +16,8 @@ from app.models.project import (
     ProjectEventType,
     ProjectStatus,
 )
+from app.services.claude_service import ClaudeService, ClaudeServiceUnavailable
+from app.services.fallback_generator import FallbackGenerator
 
 
 class ProjectNotFoundError(Exception):
@@ -34,22 +37,40 @@ class Subscription:
 class ProjectManager:
     """Central coordinator for project metadata, events, and filesystem state."""
 
-    def __init__(self, base_dir: Path, history_limit: int = 500):
+    def __init__(
+        self,
+        base_dir: Path,
+        history_limit: int = 500,
+        *,
+        claude_service: ClaudeService | None = None,
+        fallback_generator: FallbackGenerator | None = None,
+    ):
         self.base_dir = base_dir
         self._history_limit = history_limit
         self._projects: dict[str, Project] = {}
         self._subscribers: dict[str, list[asyncio.Queue[ProjectEvent]]] = {}
         self._history: dict[str, deque[ProjectEvent]] = {}
         self._lock = asyncio.Lock()
+        self._tasks: set[asyncio.Task[Any]] = set()
+        self._claude_service = claude_service or ClaudeService(settings.allowed_commands)
+        self._fallback_generator = fallback_generator or FallbackGenerator()
 
     async def startup(self) -> None:
         await asyncio.to_thread(self.base_dir.mkdir, parents=True, exist_ok=True)
 
     async def shutdown(self) -> None:
+        pending: list[asyncio.Task[Any]] = []
         async with self._lock:
+            if self._tasks:
+                pending = list(self._tasks)
+                self._tasks.clear()
             self._projects.clear()
             self._subscribers.clear()
             self._history.clear()
+        for task in pending:
+            task.cancel()
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
 
     async def create_project(self, prompt: str, template: str | None) -> Project:
         project_id = uuid4().hex
@@ -154,7 +175,7 @@ class ProjectManager:
         def _collect() -> list[ProjectFileEntry]:
             entries: list[ProjectFileEntry] = []
             for path in root.rglob("*"):
-                relative = path.relative_to(project.project_dir)
+                relative = path.relative_to(root)
                 stat_result = path.stat()
                 entries.append(
                     ProjectFileEntry(
@@ -168,6 +189,89 @@ class ProjectManager:
             return entries
 
         return await asyncio.to_thread(_collect)
+
+    async def run_generation(self, project_id: str) -> asyncio.Task[None]:
+        async def emit(message: str) -> None:
+            await self.append_log(project_id, message)
+
+        async def worker() -> None:
+            try:
+                project = await self.get_project(project_id)
+            except ProjectNotFoundError:
+                await emit("Project not found; aborting generation.")
+                return
+
+            await self.update_status(project_id, ProjectStatus.RUNNING)
+            await emit("Starting project generation...")
+
+            generation_root = project.project_dir / "generated-app"
+            preview_path: str | None = None
+
+            async def run_fallback(reason: str) -> str | None:
+                await emit(reason)
+                await emit("Falling back to local scaffold generator...")
+                try:
+                    outcome = await self._fallback_generator.generate(
+                        generation_root,
+                        project.prompt,
+                    )
+                except Exception as fallback_exc:  # pragma: no cover - defensive fallback
+                    await self._publish_event(
+                        ProjectEvent(
+                            project_id=project_id,
+                            type=ProjectEventType.ERROR,
+                            message="Fallback generation failed",
+                            payload={"detail": str(fallback_exc)},
+                        )
+                    )
+                    await emit(f"Fallback generator failed: {fallback_exc}")
+                    await self.update_status(project_id, ProjectStatus.FAILED)
+                    return None
+
+                await emit("Fallback generation completed.")
+                return outcome.preview_path
+
+            try:
+                if self._claude_service and self._claude_service.is_available:
+                    await emit("Invoking Claude service...")
+                    outcome = await self._claude_service.generate(
+                        prompt=project.prompt,
+                        project_root=generation_root,
+                        template=project.template,
+                        emit=emit,
+                    )
+                    preview_path = outcome.preview_path
+                    await emit("Claude generation finished.")
+                else:
+                    preview_path = await run_fallback(
+                        "Claude service unavailable or not configured."
+                    )
+            except ClaudeServiceUnavailable as exc:
+                preview_path = await run_fallback(f"Claude service unavailable: {exc}")
+            except Exception as exc:  # pragma: no cover - defensive guard
+                preview_path = await run_fallback(f"Claude generation error: {exc}")
+
+            if preview_path is None:
+                return
+
+            preview_url = self._build_preview_url(project_id, preview_path)
+            if preview_url:
+                await self.set_preview_url(project_id, preview_url)
+
+            await self.update_status(project_id, ProjectStatus.READY)
+            await emit("Project ready.")
+
+        task: asyncio.Task[None] = asyncio.create_task(
+            worker(), name=f"project-generation:{project_id}"
+        )
+        await self.track_task(task)
+        return task
+
+    def _build_preview_url(self, project_id: str, preview_path: str | None) -> str | None:
+        if not preview_path:
+            return None
+        normalized = preview_path.lstrip("/")
+        return f"{settings.api_prefix}/projects/{project_id}/preview/{normalized}"
 
     async def subscribe(self, project_id: str) -> Subscription:
         queue: asyncio.Queue[ProjectEvent] = asyncio.Queue()
@@ -202,6 +306,11 @@ class ProjectManager:
 
         for queue in subscribers:
             await queue.put(event)
+
+    async def track_task(self, task: asyncio.Task[Any]) -> None:
+        async with self._lock:
+            self._tasks.add(task)
+            task.add_done_callback(lambda finished: self._tasks.discard(finished))
 
 
 project_manager = ProjectManager(settings.projects_root)

@@ -27,6 +27,17 @@ class Settings(BaseSettings):
     projects_root: Path = Path("/tmp/claude-projects")
     preview_scheme: str = "http"
     preview_host: str | None = None
+    allowed_commands: list[str] = Field(
+        default_factory=lambda: [
+            "pnpm",
+            "npm",
+            "npx",
+            "yarn",
+            "node",
+            "python",
+            "python3",
+        ]
+    )
 
 
 @lru_cache(maxsize=1)

@@ -17,5 +17,6 @@ async def start_generation(
     manager: Annotated[ProjectManager, Depends(get_project_manager)],
 ) -> ProjectGenerateResponse:
     project = await manager.create_project(payload.prompt, payload.template)
+    await manager.run_generation(project.id)
 
     return ProjectGenerateResponse(project_id=project.id, status=project.status)
