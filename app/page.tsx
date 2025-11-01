@@ -1,14 +1,12 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Loader2, Play, RotateCcw, Code2, Eye } from "lucide-react"
+import { Card } from "@/components/ui/card"
+import { Code2, Eye } from "lucide-react"
 import { CodeViewer } from "@/components/code-viewer"
 import { PreviewWindow } from "@/components/preview-window"
-import { StatusPanel } from "@/components/status-panel"
 import { useGenerationSession } from "@/hooks/use-generation-session"
+import { ConversationPanel } from "@/components/conversation-panel"
 
 export default function Home() {
   const {
@@ -16,6 +14,7 @@ export default function Home() {
     setPrompt,
     isGenerating,
     logs,
+  messages,
     activeTab,
     setActiveTab,
     previewUrl,
@@ -49,44 +48,17 @@ export default function Home() {
       {/* Main Content */}
       <main className="container mx-auto px-6 py-8">
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Left Column - Input & Code */}
-          <div className="flex flex-col gap-6">
-            {/* Prompt Input */}
-            <Card className="p-6">
-              <h2 className="mb-4 text-lg font-semibold text-foreground">Describe Your App</h2>
-              <Textarea
-                placeholder="Example: Build a todo app with React that has add, delete, and mark as complete features..."
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                className="mb-4 min-h-[120px] font-mono text-sm"
-                disabled={isGenerating}
-              />
-              <div className="flex gap-3">
-                <Button onClick={handleGenerate} disabled={isGenerating || !prompt.trim()} className="flex-1">
-                  {isGenerating ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="mr-2 h-4 w-4" />
-                      Generate
-                    </>
-                  )}
-                </Button>
-                {showRegenerate && (
-                  <Button onClick={handleRegenerate} variant="outline" disabled={isGenerating}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    Regenerate
-                  </Button>
-                )}
-              </div>
-            </Card>
-
-            {/* Status Panel */}
-            <StatusPanel logs={logs} />
-          </div>
+          {/* Left Column - Conversation */}
+          <ConversationPanel
+            messages={messages}
+            logs={logs}
+            prompt={prompt}
+            onPromptChange={setPrompt}
+            onSubmit={handleGenerate}
+            onRegenerate={handleRegenerate}
+            showRegenerate={showRegenerate}
+            isGenerating={isGenerating}
+          />
 
           {/* Right Column - Code & Preview */}
           <div className="flex flex-col">

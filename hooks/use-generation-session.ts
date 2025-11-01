@@ -1,16 +1,37 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
-type LogEntry = { type: "info" | "error" | "success"; message: string }
+export type LogEntry = { type: "info" | "error" | "success"; message: string }
 type InlineGeneratedFile = { path?: string; content?: string | null }
 type ApiProjectFileEntry = { path?: string; is_dir?: boolean; updated_at?: string | null }
 
 type ViewerFile = { path: string; content?: string }
+
+type ConversationStatus = "pending" | "complete" | "error"
+type ConversationRole = "user" | "assistant"
+
+export type ConversationMessage = {
+  id: string
+  role: ConversationRole
+  content: string
+  status: ConversationStatus
+  createdAt: number
+  updatedAt: number
+  projectId?: string | null
+}
+
+const createMessageId = () => {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
+  return `msg_${Math.random().toString(36).slice(2, 10)}_${Date.now()}`
+}
 
 type UseGenerationSessionReturn = {
   prompt: string
   setPrompt: (value: string) => void
   isGenerating: boolean
   logs: LogEntry[]
+  messages: ConversationMessage[]
   activeTab: string
   setActiveTab: (value: string) => void
   previewUrl: string
@@ -28,6 +49,7 @@ export function useGenerationSession(): UseGenerationSessionReturn {
   const [prompt, setPromptState] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
+  const [messages, setMessages] = useState<ConversationMessage[]>([])
   const [activeTab, setActiveTabState] = useState("code")
   const [previewUrl, setPreviewUrl] = useState("")
   const [projectId, setProjectId] = useState<string | null>(null)
@@ -59,6 +81,8 @@ export function useGenerationSession(): UseGenerationSessionReturn {
   const pendingFetchesRef = useRef<Set<string>>(new Set())
   const statusErrorLoggedRef = useRef(false)
   const filesErrorLoggedRef = useRef(false)
+  const activeAssistantMessageIdRef = useRef<string | null>(null)
+  const lastPromptRef = useRef<string>("")
 
   useEffect(() => {
     fileContentsRef.current = fileContents
@@ -79,6 +103,73 @@ export function useGenerationSession(): UseGenerationSessionReturn {
   const addLog = useCallback((type: LogEntry["type"], message: string) => {
     setLogs((prev) => [...prev, { type, message }])
   }, [])
+
+  const beginConversationTurn = useCallback(
+    (userContent: string, assistantIntro = "Working on your app...") => {
+      const trimmed = userContent.trim()
+      if (!trimmed) {
+        return null
+      }
+      const timestamp = Date.now()
+      const userMessage: ConversationMessage = {
+        id: createMessageId(),
+        role: "user",
+        content: trimmed,
+        status: "complete",
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }
+      const assistantMessage: ConversationMessage = {
+        id: createMessageId(),
+        role: "assistant",
+        content: assistantIntro,
+        status: "pending",
+        createdAt: timestamp,
+        updatedAt: timestamp,
+      }
+      const assistantId = assistantMessage.id
+      setMessages((previous) => [...previous, userMessage, assistantMessage])
+      activeAssistantMessageIdRef.current = assistantId
+      return assistantId
+    },
+    [],
+  )
+
+  const updateAssistantMessage = useCallback(
+    (
+      id: string | null,
+      next: Partial<ConversationMessage> | ((message: ConversationMessage) => Partial<ConversationMessage>),
+    ) => {
+      if (!id) {
+        return
+      }
+      setMessages((previous) =>
+        previous.map((message) => {
+          if (message.id !== id) {
+            return message
+          }
+          const patch = typeof next === "function" ? next(message) : next
+          const status: ConversationStatus = patch.status ?? message.status
+          return {
+            ...message,
+            ...patch,
+            status,
+            updatedAt: Date.now(),
+          }
+        }),
+      )
+    },
+    [],
+  )
+
+  const updateActiveAssistantMessage = useCallback(
+    (
+      next: Partial<ConversationMessage> | ((message: ConversationMessage) => Partial<ConversationMessage>),
+    ) => {
+      updateAssistantMessage(activeAssistantMessageIdRef.current, next)
+    },
+    [updateAssistantMessage],
+  )
 
   const stopPolling = useCallback(() => {
     if (pollingRef.current !== null) {
@@ -168,6 +259,13 @@ export function useGenerationSession(): UseGenerationSessionReturn {
             if (status === "ready") {
               setActiveTab("preview")
             }
+            updateActiveAssistantMessage(() => ({
+              content:
+                status === "ready"
+                  ? "Your app is ready. Open the preview to explore the result."
+                  : `Status updated: ${status}`,
+              status: status === "failed" ? "error" : status === "ready" ? "complete" : "pending",
+            }))
           }
           return
         }
@@ -183,6 +281,10 @@ export function useGenerationSession(): UseGenerationSessionReturn {
             updatePreview(preview)
             addLog("success", "Preview ready")
             setActiveTab("preview")
+            updateActiveAssistantMessage(() => ({
+              content: "Preview is ready in the right panel.",
+              status: "complete",
+            }))
           }
           return
         }
@@ -190,8 +292,10 @@ export function useGenerationSession(): UseGenerationSessionReturn {
         if (data.type === "error") {
           if (typeof data.message === "string") {
             addLog("error", data.message)
+            updateActiveAssistantMessage(() => ({ content: data.message, status: "error" }))
           } else {
             addLog("error", "Generation error")
+            updateActiveAssistantMessage(() => ({ content: "Generation error", status: "error" }))
           }
           setProjectStatus("failed")
           return
@@ -199,6 +303,9 @@ export function useGenerationSession(): UseGenerationSessionReturn {
 
         if (data.type === "project_created" && typeof data.message === "string") {
           addLog("info", data.message)
+          updateActiveAssistantMessage((message) => ({
+            content: `${message.content}\n${data.message}`.trim(),
+          }))
           return
         }
       } catch (error) {
@@ -208,7 +315,7 @@ export function useGenerationSession(): UseGenerationSessionReturn {
         )
       }
     },
-    [addLog, updatePreview],
+    [addLog, updateActiveAssistantMessage, updatePreview],
   )
 
   const startWebSocket = useCallback(
@@ -394,6 +501,7 @@ export function useGenerationSession(): UseGenerationSessionReturn {
     pendingFetchesRef.current.clear()
     statusErrorLoggedRef.current = false
     filesErrorLoggedRef.current = false
+    activeAssistantMessageIdRef.current = null
     setProjectId(null)
     setProjectStatus(null)
     setFileOrder([])
@@ -402,87 +510,129 @@ export function useGenerationSession(): UseGenerationSessionReturn {
     setPreviewUrl("")
   }, [closeWebSocket, stopPolling])
 
+  const triggerGeneration = useCallback(
+    async (rawPrompt: string, options?: { clearPrompt?: boolean }) => {
+      const trimmedPrompt = rawPrompt.trim()
+      if (!trimmedPrompt) {
+        addLog("error", "Please enter a prompt")
+        return
+      }
+
+      lastPromptRef.current = trimmedPrompt
+
+      resetForNewGeneration()
+
+      const assistantMessageId = beginConversationTurn(trimmedPrompt)
+      if (options?.clearPrompt ?? true) {
+        setPromptState("")
+      }
+
+      setIsGenerating(true)
+      setLogs([])
+      addLog("info", "Starting generation...")
+      addLog("info", `Prompt: ${trimmedPrompt}`)
+
+      try {
+        const response = await fetch(`${apiBaseUrl}/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: trimmedPrompt }),
+        })
+
+        if (!response.ok) {
+          throw new Error(`Generation failed (status ${response.status})`)
+        }
+
+        const data = await response.json()
+        if (typeof data.project_id === "string") {
+          setProjectId(data.project_id)
+          if (typeof data.status === "string") {
+            setProjectStatus(data.status)
+          }
+          addLog("success", `Generation request accepted (project ${data.project_id})`)
+          updateAssistantMessage(assistantMessageId, {
+            content: `Project ${data.project_id} accepted. I will update you as soon as it is ready.`,
+            status: "pending",
+            projectId: data.project_id,
+          })
+          startWebSocket(data.project_id)
+          startPolling(data.project_id)
+          setActiveTab("code")
+          return
+        }
+
+        const inlineFiles: InlineGeneratedFile[] = Array.isArray(data.files) ? data.files : []
+        if (inlineFiles.length > 0) {
+          const nextOrder = inlineFiles
+            .map((file) => file?.path)
+            .filter((path): path is string => typeof path === "string")
+          const uniquePaths = Array.from(new Set(nextOrder))
+          const contents: Record<string, string> = {}
+          for (const file of inlineFiles) {
+            if (file?.path && typeof file.content === "string") {
+              contents[file.path] = file.content
+            }
+          }
+          metadataRef.current = {}
+          fileContentsRef.current = contents
+          setFileOrder(uniquePaths)
+          setFileContents(contents)
+          setSelectedFile(uniquePaths[0] ?? null)
+          addLog("success", `Generated ${inlineFiles.length} files`)
+          if (typeof data.preview_url === "string" && data.preview_url.trim()) {
+            updatePreview(data.preview_url)
+            addLog("success", "Preview server started")
+            setActiveTab("preview")
+          }
+          const summarySegments: string[] = []
+          if (inlineFiles.length > 0) {
+            summarySegments.push(`Generated ${inlineFiles.length} file${inlineFiles.length === 1 ? "" : "s"}.`)
+          }
+          if (typeof data.preview_url === "string" && data.preview_url.trim()) {
+            summarySegments.push("Preview is ready in the right panel.")
+          }
+          updateAssistantMessage(assistantMessageId, {
+            content: summarySegments.join(" ") || "Generation complete.",
+            status: "complete",
+          })
+          return
+        }
+
+        throw new Error("Unexpected response from backend")
+      } catch (error) {
+        addLog("error", error instanceof Error ? error.message : "An error occurred")
+        updateAssistantMessage(assistantMessageId, {
+          content: error instanceof Error ? error.message : "An unexpected error occurred.",
+          status: "error",
+        })
+      } finally {
+        setIsGenerating(false)
+      }
+    },
+    [
+      addLog,
+      apiBaseUrl,
+      beginConversationTurn,
+      resetForNewGeneration,
+      startPolling,
+      startWebSocket,
+      updateAssistantMessage,
+      updatePreview,
+    ],
+  )
+
   const handleGenerate = useCallback(async () => {
-    if (!prompt.trim()) {
-      addLog("error", "Please enter a prompt")
+    await triggerGeneration(prompt, { clearPrompt: true })
+  }, [prompt, triggerGeneration])
+
+  const handleRegenerate = useCallback(async () => {
+    const previousPrompt = lastPromptRef.current
+    if (!previousPrompt.trim()) {
+      addLog("info", "No previous prompt available to regenerate.")
       return
     }
-
-    resetForNewGeneration()
-    setIsGenerating(true)
-    setLogs([])
-    addLog("info", "Starting generation...")
-    addLog("info", `Prompt: ${prompt}`)
-
-    try {
-      const response = await fetch(`${apiBaseUrl}/generate`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`Generation failed (status ${response.status})`)
-      }
-
-      const data = await response.json()
-      if (typeof data.project_id === "string") {
-        setProjectId(data.project_id)
-        if (typeof data.status === "string") {
-          setProjectStatus(data.status)
-        }
-        addLog("success", `Generation request accepted (project ${data.project_id})`)
-        startWebSocket(data.project_id)
-        startPolling(data.project_id)
-        setActiveTab("code")
-        return
-      }
-
-      const inlineFiles: InlineGeneratedFile[] = Array.isArray(data.files) ? data.files : []
-      if (inlineFiles.length > 0) {
-        const nextOrder = inlineFiles
-          .map((file) => file?.path)
-          .filter((path): path is string => typeof path === "string")
-        const uniquePaths = Array.from(new Set(nextOrder))
-        const contents: Record<string, string> = {}
-        for (const file of inlineFiles) {
-          if (file?.path && typeof file.content === "string") {
-            contents[file.path] = file.content
-          }
-        }
-        metadataRef.current = {}
-        fileContentsRef.current = contents
-        setFileOrder(uniquePaths)
-        setFileContents(contents)
-        setSelectedFile(uniquePaths[0] ?? null)
-        addLog("success", `Generated ${inlineFiles.length} files`)
-        if (typeof data.preview_url === "string" && data.preview_url.trim()) {
-          updatePreview(data.preview_url)
-          addLog("success", "Preview server started")
-          setActiveTab("preview")
-        }
-        return
-      }
-
-      throw new Error("Unexpected response from backend")
-    } catch (error) {
-      addLog("error", error instanceof Error ? error.message : "An error occurred")
-    } finally {
-      setIsGenerating(false)
-    }
-  }, [
-    addLog,
-    apiBaseUrl,
-    prompt,
-    resetForNewGeneration,
-    startPolling,
-    startWebSocket,
-    updatePreview,
-  ])
-
-  const handleRegenerate = useCallback(() => {
-    void handleGenerate()
-  }, [handleGenerate])
+    await triggerGeneration(previousPrompt, { clearPrompt: false })
+  }, [addLog, triggerGeneration])
 
   const handleRefreshPreview = useCallback(() => {
     if (!previewUrl) {
@@ -522,6 +672,7 @@ export function useGenerationSession(): UseGenerationSessionReturn {
     setPrompt,
     isGenerating,
     logs,
+    messages,
     activeTab,
     setActiveTab,
     previewUrl,
