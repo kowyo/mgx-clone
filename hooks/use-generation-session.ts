@@ -211,7 +211,7 @@ export function useGenerationSession(): UseGenerationSessionReturn {
   }, [closeWebSocket, stopPolling])
 
   const toAbsolutePreviewUrl = useCallback(
-    async (raw: string) => {
+    (raw: string) => {
       if (!raw) {
         return ""
       }
@@ -226,18 +226,15 @@ export function useGenerationSession(): UseGenerationSessionReturn {
           url = new URL(raw, backendOrigin)
         }
         
-        // Add authentication token to preview URLs
-        const token = await getJWTToken(session)
-        if (token && !url.searchParams.has("token")) {
-          url.searchParams.set("token", token)
-        }
+        // Remove any existing token parameter to keep URL stable
+        url.searchParams.delete("token")
         
         return url.toString()
       } catch {
         return raw
       }
     },
-    [backendOrigin, session],
+    [backendOrigin],
   )
 
   const updatePreview = useCallback(
@@ -246,27 +243,11 @@ export function useGenerationSession(): UseGenerationSessionReturn {
         setPreviewUrl("")
         return
       }
-      // Handle async token fetching internally
-      toAbsolutePreviewUrl(raw).then(setPreviewUrl).catch((error) => {
-        console.error("Error updating preview URL:", error)
-        // Fallback to URL without token if token fetch fails
-        try {
-          const url = raw.startsWith("http://") || raw.startsWith("https://")
-            ? new URL(raw)
-            : backendOrigin
-            ? new URL(raw, backendOrigin)
-            : null
-          if (url) {
-            setPreviewUrl(url.toString())
-          } else {
-            setPreviewUrl(raw)
-          }
-        } catch {
-          setPreviewUrl(raw)
-        }
-      })
+      // Convert to absolute URL without token to keep it stable
+      const stableUrl = toAbsolutePreviewUrl(raw)
+      setPreviewUrl(stableUrl)
     },
-    [toAbsolutePreviewUrl, backendOrigin],
+    [toAbsolutePreviewUrl],
   )
 
   const buildWsUrl = useCallback(

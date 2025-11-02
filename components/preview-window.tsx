@@ -25,8 +25,10 @@ export function PreviewWindow({ url, onRefresh }: PreviewWindowProps) {
     <div className="flex h-full flex-col">
       {/* Preview Toolbar */}
       <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4">
-        <div className="flex items-center gap-2">
-          <span className="ml-3 font-mono text-xs text-muted-foreground">{url}</span>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <span className="ml-3 font-mono text-xs text-muted-foreground truncate" title={url}>
+            {url}
+          </span>
         </div>
         <div className="flex gap-2">
           <Button size="sm" variant="ghost" onClick={onRefresh}>
@@ -52,6 +54,7 @@ export function PreviewWindow({ url, onRefresh }: PreviewWindowProps) {
           className="h-full w-full border-0"
           title="App Preview"
           sandbox="allow-scripts allow-same-origin allow-forms"
+          referrerPolicy="no-referrer-when-downgrade"
         />
       </div>
     </div>
