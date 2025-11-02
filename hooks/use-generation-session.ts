@@ -101,6 +101,8 @@ export function useGenerationSession(): UseGenerationSessionReturn {
   const filesErrorLoggedRef = useRef(false)
   const activeAssistantMessageIdRef = useRef<string | null>(null)
   const lastPromptRef = useRef<string>("")
+  const basePreviewUrlRef = useRef<string>("")
+  const previewUrlWithTokenRef = useRef<string>("")
 
   useEffect(() => {
     fileContentsRef.current = fileContents
@@ -211,7 +213,7 @@ export function useGenerationSession(): UseGenerationSessionReturn {
   }, [closeWebSocket, stopPolling])
 
   const toAbsolutePreviewUrl = useCallback(
-    (raw: string) => {
+    async (raw: string) => {
       if (!raw) {
         return ""
       }
@@ -226,28 +228,68 @@ export function useGenerationSession(): UseGenerationSessionReturn {
           url = new URL(raw, backendOrigin)
         }
         
-        // Remove any existing token parameter to keep URL stable
+        // Remove any existing token parameter first
         url.searchParams.delete("token")
         
-        return url.toString()
+        // Get base URL without token for comparison
+        const baseUrl = url.toString()
+        
+        // Only regenerate URL with token if the base URL changed
+        if (baseUrl !== basePreviewUrlRef.current) {
+          basePreviewUrlRef.current = baseUrl
+          
+          // Add token for authentication (iframes need explicit auth)
+          const token = await getJWTToken(session)
+          if (token) {
+            url.searchParams.set("token", token)
+            const urlWithToken = url.toString()
+            previewUrlWithTokenRef.current = urlWithToken
+            return urlWithToken
+          }
+          
+          // If no token, use base URL
+          previewUrlWithTokenRef.current = baseUrl
+          return baseUrl
+        }
+        
+        // Base URL hasn't changed, return cached URL with token
+        return previewUrlWithTokenRef.current || baseUrl
       } catch {
         return raw
       }
     },
-    [backendOrigin],
+    [backendOrigin, session],
   )
 
   const updatePreview = useCallback(
     (raw?: string | null) => {
       if (!raw) {
+        basePreviewUrlRef.current = ""
+        previewUrlWithTokenRef.current = ""
         setPreviewUrl("")
         return
       }
-      // Convert to absolute URL without token to keep it stable
-      const stableUrl = toAbsolutePreviewUrl(raw)
-      setPreviewUrl(stableUrl)
+      // Convert to absolute URL with token, but only update if base URL changed
+      toAbsolutePreviewUrl(raw).then(setPreviewUrl).catch((error) => {
+        console.error("Error updating preview URL:", error)
+        // Fallback: try without token
+        try {
+          let url: URL
+          if (raw.startsWith("http://") || raw.startsWith("https://")) {
+            url = new URL(raw)
+          } else if (backendOrigin) {
+            url = new URL(raw, backendOrigin)
+          } else {
+            setPreviewUrl(raw)
+            return
+          }
+          setPreviewUrl(url.toString())
+        } catch {
+          setPreviewUrl(raw)
+        }
+      })
     },
-    [toAbsolutePreviewUrl],
+    [toAbsolutePreviewUrl, backendOrigin],
   )
 
   const buildWsUrl = useCallback(
@@ -547,6 +589,8 @@ export function useGenerationSession(): UseGenerationSessionReturn {
     statusErrorLoggedRef.current = false
     filesErrorLoggedRef.current = false
     activeAssistantMessageIdRef.current = null
+    basePreviewUrlRef.current = ""
+    previewUrlWithTokenRef.current = ""
     setProjectId(null)
     setProjectStatus(null)
     setFileOrder([])
