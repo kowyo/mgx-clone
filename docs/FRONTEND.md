@@ -1,6 +1,6 @@
 # Frontend Architecture
 
-This document describes the design and organization of the frontend in this repository ("MGX Clone"). It explains the high-level architecture, folder structure, component design patterns, data flow, styling conventions, testing pointers, and contribution guidelines for frontend work.
+This document describes the design and organization of the frontend in this repository ("MGX Clone"). It explains the high-level architecture, folder structure, component design patterns, data flow, styling conventions, testing pointers.
 
 ## Overview
 
@@ -88,12 +88,6 @@ This document describes the design and organization of the frontend in this repo
 2. Add a minimal test file for important logic.
 3. Export the component from an index file if it should be part of the public surface.
 4. If the component needs styles, prefer Tailwind utilities or add a small module-level CSS file.
-
-## Contribution notes
-
-- Follow existing naming and file-organization conventions.
-- Keep PRs small and focused on a single concern: a new component, bug fix, or layout change.
-- Add a short entry in `CHANGELOG.md` or PR description describing the UX change.
 
 ## Developer experience
 
