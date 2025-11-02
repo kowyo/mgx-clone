@@ -29,6 +29,7 @@ export type UseGenerationSessionReturn = {
   setSelectedFile: (path: string | null) => void
   handleGenerate: () => Promise<void>
   handleRefreshPreview: () => void
+  loadProject: (projectId: string) => Promise<void>
   codeViewerLoading: boolean
 }
 

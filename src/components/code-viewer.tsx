@@ -16,7 +16,7 @@ export function CodeViewer({ files, selectedFile, onSelect, loading = false }: C
 
   if (files.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-muted-foreground">
+      <div className="flex h-full items-center justify-center text-muted-foreground min-w-0 w-full">
         <div className="text-center">
           <FileCode className="mx-auto mb-3 h-12 w-12 opacity-50" />
           <p className="text-sm">{loading ? "Awaiting generated files..." : "No code generated yet"}</p>
@@ -27,9 +27,9 @@ export function CodeViewer({ files, selectedFile, onSelect, loading = false }: C
   }
 
   return (
-    <div className="flex h-full">
+    <div className="flex h-full min-w-0 w-full">
       {/* File Tree */}
-      <div className="w-64 border-r border-border bg-muted/30">
+      <div className="w-64 border-r border-border bg-muted/30 shrink-0">
         <ScrollArea className="h-full">
           <div className="p-4">
             <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Files</p>
@@ -55,19 +55,21 @@ export function CodeViewer({ files, selectedFile, onSelect, loading = false }: C
       </div>
 
       {/* Code Display */}
-      <div className="flex-1">
+      <div className="flex-1 min-w-0 overflow-hidden">
         <ScrollArea className="h-full">
           {currentFile ? (
-            <div className="p-6">
-              <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground">
-                <ChevronRight className="h-4 w-4" />
-                <span className="font-mono">{currentFile.path}</span>
+            <div className="p-6 min-w-0">
+              <div className="mb-4 flex items-center gap-2 text-sm text-muted-foreground min-w-0">
+                <ChevronRight className="h-4 w-4 shrink-0" />
+                <span className="font-mono truncate">{currentFile.path}</span>
               </div>
-              <pre className="rounded-lg bg-muted p-4 text-xs leading-relaxed">
-                <code className="font-mono text-foreground">
-                  {currentFile.content ?? "(Loading content...)"}
-                </code>
-              </pre>
+              <div className="overflow-x-auto">
+                <pre className="rounded-lg bg-muted p-4 text-xs leading-relaxed min-w-0">
+                  <code className="font-mono text-foreground whitespace-pre-wrap break-words">
+                    {currentFile.content ?? "(Loading content...)"}
+                  </code>
+                </pre>
+              </div>
             </div>
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">
