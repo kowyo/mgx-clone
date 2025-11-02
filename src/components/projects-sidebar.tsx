@@ -172,12 +172,6 @@ export function ProjectsSidebar({ onProjectClick }: ProjectsSidebarProps) {
                         </div>
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
                           <span>{formatDate(project.created_at)}</span>
-                          {project.preview_url && (
-                            <>
-                              <span>•</span>
-                              <span className="text-green-600 dark:text-green-400">Ready</span>
-                            </>
-                          )}
                         </div>
                       </div>
                     </SidebarMenuButton>
