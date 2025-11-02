@@ -30,6 +30,7 @@ export default function Home() {
     handleGenerate,
     handleRefreshPreview,
     loadProject,
+    resetForNewChat,
     codeViewerLoading,
   } = useGenerationSession()
 
@@ -37,7 +38,7 @@ export default function Home() {
 
   return (
     <SidebarProvider defaultOpen={false}>
-      <ProjectsSidebar onProjectClick={loadProject} />
+      <ProjectsSidebar onProjectClick={loadProject} onNewChat={resetForNewChat} />
       <SidebarInset className="min-w-0 overflow-x-hidden">
         <div className="flex h-screen flex-col bg-background min-w-0 w-full overflow-x-hidden">
           {/* Header */}

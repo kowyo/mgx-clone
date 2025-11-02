@@ -299,6 +299,16 @@ export function useGenerationSession(): UseGenerationSessionReturn {
     setPreviewUrl("")
   }, [closeWebSocket])
 
+  // Reset for new chat (clears everything including messages)
+  const resetForNewChat = useCallback(() => {
+    resetForNewGeneration()
+    setMessages([])
+    setLogs([])
+    setPromptState("")
+    setIsGenerating(false)
+    setActiveTabState("code")
+  }, [resetForNewGeneration])
+
   // Generation trigger
   const triggerGeneration = useCallback(
     async (rawPrompt: string, options?: { clearPrompt?: boolean }) => {
@@ -562,6 +572,7 @@ export function useGenerationSession(): UseGenerationSessionReturn {
     handleGenerate,
     handleRefreshPreview,
     loadProject,
+    resetForNewChat,
     codeViewerLoading,
   }
 }

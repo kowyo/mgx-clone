@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSession } from "@/lib/auth-client"
+import { useRouter } from "next/navigation"
 import {
   Sidebar,
   SidebarContent,
@@ -17,16 +18,19 @@ import {
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { fetchUserProjects, type ProjectListItem } from "@/hooks/generation/services/projects-list-service"
-import { Code2, FolderOpen, Loader2 } from "lucide-react"
+import { Code2, FolderOpen, Loader2, SquarePen } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface ProjectsSidebarProps {
   onProjectClick?: (projectId: string) => void | Promise<void>
+  onNewChat?: () => void
 }
 
-export function ProjectsSidebar({ onProjectClick }: ProjectsSidebarProps) {
+export function ProjectsSidebar({ onProjectClick, onNewChat }: ProjectsSidebarProps) {
   const { data: session } = useSession()
+  const router = useRouter()
   const [projects, setProjects] = useState<ProjectListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -87,6 +91,22 @@ export function ProjectsSidebar({ onProjectClick }: ProjectsSidebarProps) {
               {projects.length} project{projects.length !== 1 ? "s" : ""}
             </span>
           </div>
+        </div>
+        <div className="px-4 pb-2 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:pb-2">
+          <Button
+            variant="ghost"
+            className="w-full h-auto py-2 justify-start gap-2 px-0 group-data-[collapsible=icon]:w-auto group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:py-0 group-data-[collapsible=icon]:px-0"
+            onClick={() => {
+              onNewChat?.()
+              router.push("/")
+            }}
+            title="New Chat"
+          >
+            <div className="flex items-center justify-center size-6 shrink-0 group-data-[collapsible=icon]:size-8">
+              <SquarePen className="h-4 w-4 shrink-0" />
+            </div>
+            <span className="text-sm font-medium group-data-[collapsible=icon]:hidden">New Chat</span>
+          </Button>
         </div>
       </SidebarHeader>
       <SidebarContent className="group-data-[collapsible=icon]:hidden">

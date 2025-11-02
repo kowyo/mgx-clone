@@ -30,6 +30,7 @@ export type UseGenerationSessionReturn = {
   handleGenerate: () => Promise<void>
   handleRefreshPreview: () => void
   loadProject: (projectId: string) => Promise<void>
+  resetForNewChat: () => void
   codeViewerLoading: boolean
 }
 
