@@ -46,6 +46,23 @@ class ProjectPreviewResponse(BaseModel):
     preview_url: str | None = None
 
 
+class ProjectListItem(BaseModel):
+    """Summary information for a project in a list."""
+
+    id: str
+    prompt: str
+    status: ProjectStatus
+    preview_url: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+
+class ProjectListResponse(BaseModel):
+    """Response for listing user projects."""
+
+    projects: list[ProjectListItem] = Field(default_factory=list)
+
+
 class ProjectEventMessage(ProjectEvent):
     """Alias wrapper for WebSocket responses."""
 

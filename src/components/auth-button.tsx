@@ -18,18 +18,18 @@ export function AuthButton() {
 
   if (session?.user) {
     return (
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 min-w-0">
         {session.user.image && (
           <img
             src={session.user.image}
             alt={session.user.name || "User"}
-            className="h-6 w-6 rounded-full"
+            className="h-6 w-6 rounded-full shrink-0"
           />
         )}
-        <span className="text-sm text-muted-foreground">
+        <span className="text-sm text-muted-foreground truncate max-w-[150px]">
           {session.user.name || session.user.email}
         </span>
-        <Button variant="ghost" size="sm" onClick={() => signOut()}>
+        <Button variant="ghost" size="sm" onClick={() => signOut()} className="shrink-0">
           Sign Out
         </Button>
       </div>

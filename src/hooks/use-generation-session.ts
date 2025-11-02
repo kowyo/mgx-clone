@@ -431,6 +431,109 @@ export function useGenerationSession(): UseGenerationSessionReturn {
     addLog("success", "Preview refreshed")
   }, [addLog, previewUrl])
 
+  // Load an existing project
+  const loadProject = useCallback(
+    async (id: string) => {
+      resetForNewGeneration()
+      
+      projectIdRef.current = id
+      setProjectId(id)
+      
+      addLog("info", `Loading project ${id}...`)
+      
+      try {
+        // Create a user message for context
+        const userMessage: ConversationMessage = {
+          id: `load-${id}-${Date.now()}`,
+          role: "user",
+          content: `Opening project ${id}`,
+          status: "complete",
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          projectId: id,
+        }
+        
+        const assistantMessage: ConversationMessage = {
+          id: `load-assistant-${id}-${Date.now()}`,
+          role: "assistant",
+          content: "Loading project files and status...",
+          status: "pending",
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          projectId: id,
+        }
+        
+        setMessages([userMessage, assistantMessage])
+        activeAssistantMessageIdRef.current = assistantMessage.id
+        
+        // Fetch project status
+        const headers = await getAuthHeaders(session)
+        const statusResponse = await fetch(`${apiBaseUrl}/projects/${id}/status`, {
+          cache: "no-store",
+          credentials: "include",
+          headers,
+        })
+        
+        if (!statusResponse.ok) {
+          throw new Error(`Failed to load project: ${statusResponse.status}`)
+        }
+        
+        const statusData = await statusResponse.json()
+        
+        if (typeof statusData.status === "string") {
+          setProjectStatus(statusData.status)
+        }
+        
+        if (typeof statusData.preview_url === "string" && statusData.preview_url) {
+          await updatePreview(statusData.preview_url)
+        }
+        
+        // Start WebSocket connection
+        startWebSocket(id)
+        
+        // Start polling for updates
+        startPollingHandler(id)
+        
+        // Fetch files immediately
+        await fetchProjectFilesHandler()
+        
+        // Set appropriate tab
+        if (statusData.preview_url) {
+          setActiveTab("preview")
+        } else {
+          setActiveTab("code")
+        }
+        
+        updateAssistantMessage(assistantMessage.id, {
+          content: statusData.status === "ready" 
+            ? "Project loaded. You can view the code and preview."
+            : `Project loaded. Status: ${statusData.status}`,
+          status: statusData.status === "ready" ? "complete" : "pending",
+        })
+        
+        addLog("success", `Project ${id} loaded`)
+      } catch (error) {
+        addLog("error", error instanceof Error ? error.message : "Failed to load project")
+        updateAssistantMessage(activeAssistantMessageIdRef.current, {
+          content: error instanceof Error ? error.message : "Failed to load project",
+          status: "error",
+        })
+      }
+    },
+    [
+      addLog,
+      apiBaseUrl,
+      fetchProjectFilesHandler,
+      resetForNewGeneration,
+      session,
+      startPollingHandler,
+      startWebSocket,
+      updateAssistantMessage,
+      updatePreview,
+      setActiveTab,
+    ],
+  )
+
   const filesForViewer = useMemo<ViewerFile[]>(() => {
     const files = fileOrder.map((path) => ({ path, content: fileContents[path] }))
     return files
@@ -462,6 +565,7 @@ export function useGenerationSession(): UseGenerationSessionReturn {
     setSelectedFile,
     handleGenerate,
     handleRefreshPreview,
+    loadProject,
     codeViewerLoading,
   }
 }

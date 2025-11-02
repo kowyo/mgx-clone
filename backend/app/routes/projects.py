@@ -12,6 +12,8 @@ from fastapi.responses import PlainTextResponse, Response
 from app.dependencies import AsyncDBSession, CurrentUser, get_project_manager
 from app.models.api import (
     ProjectFilesResponse,
+    ProjectListItem,
+    ProjectListResponse,
     ProjectPreviewResponse,
     ProjectStatusResponse,
 )
@@ -22,6 +24,37 @@ from app.tools.path_utils import resolve_project_path
 ProjectManagerDep = Annotated[ProjectManager, Depends(get_project_manager)]
 
 router = APIRouter(prefix="/projects", tags=["projects"])
+
+
+@router.get("", response_model=ProjectListResponse)
+async def list_user_projects(
+    manager: ProjectManagerDep,
+    current_user: CurrentUser,
+    db: AsyncDBSession,
+    limit: int = 50,
+    offset: int = 0,
+) -> ProjectListResponse:
+    """List all projects for the current user."""
+    projects = await manager.list_user_projects(
+        user_id=current_user.id,
+        db=db,
+        limit=limit,
+        offset=offset,
+    )
+    
+    project_items = [
+        ProjectListItem(
+            id=project.id,
+            prompt=project.prompt,
+            status=project.status,
+            preview_url=project.preview_url,
+            created_at=project.created_at,
+            updated_at=project.updated_at,
+        )
+        for project in projects
+    ]
+    
+    return ProjectListResponse(projects=project_items)
 
 
 ASSET_FALLBACK_SUFFIXES = {
