@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useSession } from "@/lib/auth-client"
 
 export type LogEntry = { type: "info" | "error" | "success"; message: string }
 type InlineGeneratedFile = { path?: string; content?: string | null }
@@ -44,6 +45,7 @@ type UseGenerationSessionReturn = {
 }
 
 export function useGenerationSession(): UseGenerationSessionReturn {
+  const { data: session } = useSession()
   const [prompt, setPromptState] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [logs, setLogs] = useState<LogEntry[]>([])
@@ -57,6 +59,17 @@ export function useGenerationSession(): UseGenerationSessionReturn {
   const [selectedFile, setSelectedFileState] = useState<string | null>(null)
 
   const apiBaseUrl = (process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://127.0.0.1:8000/api").replace(/\/$/, "")
+  
+  // Get auth token for API requests
+  const getAuthHeaders = useCallback(() => {
+    const headers: Record<string, string> = { "Content-Type": "application/json" }
+    // Better-auth session token is in session.session.token or session.token
+    const token = session?.session?.token || session?.token || (session as any)?.accessToken
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    }
+    return headers
+  }, [session])
   const wsBaseEnv = useMemo(() => {
     const raw = process.env.NEXT_PUBLIC_BACKEND_WS_URL
     return raw ? raw.replace(/\/$/, "") : null
@@ -351,7 +364,10 @@ export function useGenerationSession(): UseGenerationSessionReturn {
           .split("/")
           .map((segment) => encodeURIComponent(segment))
           .join("/")
-        const response = await fetch(`${apiBaseUrl}/projects/${id}/files/${encodedPath}`, { cache: "no-store" })
+        const response = await fetch(`${apiBaseUrl}/projects/${id}/files/${encodedPath}`, {
+          cache: "no-store",
+          headers: getAuthHeaders(),
+        })
         if (!response.ok) {
           throw new Error(`status ${response.status}`)
         }
@@ -372,7 +388,10 @@ export function useGenerationSession(): UseGenerationSessionReturn {
   const fetchProjectFiles = useCallback(
     async (id: string) => {
       try {
-        const response = await fetch(`${apiBaseUrl}/projects/${id}/files`, { cache: "no-store" })
+        const response = await fetch(`${apiBaseUrl}/projects/${id}/files`, {
+          cache: "no-store",
+          headers: getAuthHeaders(),
+        })
         if (!response.ok) {
           if (!filesErrorLoggedRef.current) {
             addLog("error", `Failed to fetch files (status ${response.status})`)
@@ -431,13 +450,16 @@ export function useGenerationSession(): UseGenerationSessionReturn {
         }
       }
     },
-    [addLog, apiBaseUrl, fetchFileContent],
+    [addLog, apiBaseUrl, fetchFileContent, getAuthHeaders],
   )
 
   const fetchProjectStatus = useCallback(
     async (id: string) => {
       try {
-        const response = await fetch(`${apiBaseUrl}/projects/${id}/status`, { cache: "no-store" })
+        const response = await fetch(`${apiBaseUrl}/projects/${id}/status`, {
+          cache: "no-store",
+          headers: getAuthHeaders(),
+        })
         if (!response.ok) {
           if (!statusErrorLoggedRef.current) {
             addLog("error", `Failed to fetch status (status ${response.status})`)
@@ -533,7 +555,7 @@ export function useGenerationSession(): UseGenerationSessionReturn {
       try {
         const response = await fetch(`${apiBaseUrl}/generate`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({ prompt: trimmedPrompt }),
         })
 

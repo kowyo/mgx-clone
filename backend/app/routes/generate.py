@@ -4,7 +4,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, status
 
-from app.dependencies import get_project_manager
+from app.dependencies import AsyncDBSession, CurrentUser, get_project_manager
 from app.models.api import ProjectGenerateRequest, ProjectGenerateResponse
 from app.services.project_service import ProjectManager
 
@@ -15,8 +15,15 @@ router = APIRouter(prefix="/generate", tags=["generation"])
 async def start_generation(
     payload: ProjectGenerateRequest,
     manager: Annotated[ProjectManager, Depends(get_project_manager)],
+    current_user: CurrentUser,
+    db: AsyncDBSession,
 ) -> ProjectGenerateResponse:
-    project = await manager.create_project(payload.prompt, payload.template)
-    await manager.run_generation(project.id)
+    project = await manager.create_project(
+        user_id=current_user.id,
+        prompt=payload.prompt,
+        template=payload.template,
+        db=db,
+    )
+    await manager.run_generation(project.id, db=db)
 
     return ProjectGenerateResponse(project_id=project.id, status=project.status)

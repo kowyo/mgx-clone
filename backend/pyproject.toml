@@ -13,6 +13,11 @@ dependencies = [
     "aiofiles>=23.2.1",
     "structlog>=23.3.0",
     "python-dotenv>=1.0.1",
+    "sqlalchemy>=2.0.44",
+    "aiosqlite>=0.21.0",
+    "pyjwt>=2.10.1",
+    "cryptography>=46.0.3",
+    "greenlet>=3.2.4",
 ]
 
 [project.optional-dependencies]

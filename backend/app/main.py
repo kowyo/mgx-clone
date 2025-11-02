@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
+from app.database import init_db
 from app.routes import api_router, ws_router
 from app.services.project_service import project_manager
 
@@ -15,6 +16,8 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Initialize database
+    await init_db()
     await project_manager.startup()
     app.state.project_manager = project_manager
     try:

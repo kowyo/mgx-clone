@@ -9,7 +9,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import PlainTextResponse, Response
 
-from app.dependencies import get_project_manager
+from app.dependencies import AsyncDBSession, CurrentUser, get_project_manager
 from app.models.api import (
     ProjectFilesResponse,
     ProjectPreviewResponse,
@@ -122,9 +122,11 @@ def _rewrite_preview_html(document: str) -> str:
 async def get_project_status(
     project_id: str,
     manager: ProjectManagerDep,
+    current_user: CurrentUser,
+    db: AsyncDBSession,
 ) -> ProjectStatusResponse:
     try:
-        project = await manager.get_project(project_id)
+        project = await manager.get_project(project_id, user_id=current_user.id, db=db)
     except ProjectNotFoundError as exc:  # pragma: no cover - defensive guard
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -141,8 +143,12 @@ async def get_project_status(
 async def list_project_files(
     project_id: str,
     manager: ProjectManagerDep,
+    current_user: CurrentUser,
+    db: AsyncDBSession,
 ) -> ProjectFilesResponse:
     try:
+        # Verify project ownership
+        await manager.get_project(project_id, user_id=current_user.id, db=db)
         files = await manager.list_files(project_id)
     except ProjectNotFoundError as exc:  # pragma: no cover - defensive guard
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
@@ -155,9 +161,11 @@ async def get_project_file_content(
     project_id: str,
     file_path: str,
     manager: ProjectManagerDep,
+    current_user: CurrentUser,
+    db: AsyncDBSession,
 ) -> PlainTextResponse:
     try:
-        project = await manager.get_project(project_id)
+        project = await manager.get_project(project_id, user_id=current_user.id, db=db)
     except ProjectNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -194,9 +202,11 @@ async def get_project_file_content(
 async def get_project_preview(
     project_id: str,
     manager: ProjectManagerDep,
+    current_user: CurrentUser,
+    db: AsyncDBSession,
 ) -> ProjectPreviewResponse:
     try:
-        project = await manager.get_project(project_id)
+        project = await manager.get_project(project_id, user_id=current_user.id, db=db)
     except ProjectNotFoundError as exc:  # pragma: no cover - defensive guard
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
@@ -208,9 +218,11 @@ async def fetch_preview_asset(
     project_id: str,
     asset_path: str,
     manager: ProjectManagerDep,
+    current_user: CurrentUser,
+    db: AsyncDBSession,
 ) -> Response:
     try:
-        project = await manager.get_project(project_id)
+        project = await manager.get_project(project_id, user_id=current_user.id, db=db)
     except ProjectNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 

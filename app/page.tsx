@@ -11,6 +11,7 @@ import { PreviewWindow } from "@/components/preview-window"
 import { useGenerationSession } from "@/hooks/use-generation-session"
 import { ConversationPanel } from "@/components/conversation-panel"
 import { ImperativePanelHandle } from "react-resizable-panels"
+import { AuthButton } from "@/components/auth-button"
 
 export default function Home() {
   const {
@@ -50,7 +51,7 @@ export default function Home() {
           </div>
           {/* Spacer for ResizableHandle */}
           <div className="w-px" />
-          <div className="flex-1">
+          <div className="flex-1 flex items-center justify-between">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="bg-transparent p-0 h-auto">
                 <TabsTrigger value="code" className="gap-2 flex-none">
@@ -63,6 +64,9 @@ export default function Home() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+            <div className="px-6">
+              <AuthButton />
+            </div>
           </div>
         </div>
       </header>

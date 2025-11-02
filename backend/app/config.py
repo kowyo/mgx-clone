@@ -38,6 +38,14 @@ class Settings(BaseSettings):
             "python3",
         ]
     )
+    better_auth_secret: str = Field(
+        default="your-secret-key-change-in-production",
+        description="Secret key for better-auth JWT verification",
+    )
+    better_auth_url: str = Field(
+        default="http://localhost:3000",
+        description="Better-auth base URL",
+    )
 
 
 @lru_cache(maxsize=1)

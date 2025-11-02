@@ -10,6 +10,9 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.config import settings
 from app.models.api import ProjectFileEntry
 from app.models.project import (
@@ -18,6 +21,7 @@ from app.models.project import (
     ProjectEventType,
     ProjectStatus,
 )
+from app.models.project_db import ProjectDB
 from app.services.claude_service import ClaudeService, ClaudeServiceUnavailable
 from app.services.fallback_generator import FallbackGenerator
 from app.tools.command_adapter import CommandAdapter
@@ -63,6 +67,20 @@ class ProjectManager:
     async def startup(self) -> None:
         await asyncio.to_thread(self.base_dir.mkdir, parents=True, exist_ok=True)
 
+    def _project_db_to_model(self, project_db: ProjectDB) -> Project:
+        """Convert database model to domain model."""
+        return Project(
+            id=project_db.id,
+            prompt=project_db.prompt,
+            status=ProjectStatus(project_db.status),
+            template=project_db.template,
+            project_dir=Path(project_db.project_dir),
+            created_at=project_db.created_at,
+            updated_at=project_db.updated_at,
+            preview_url=project_db.preview_url,
+            metadata=project_db.project_metadata or {},
+        )
+
     async def shutdown(self) -> None:
         pending: list[asyncio.Task[Any]] = []
         async with self._lock:
@@ -77,22 +95,38 @@ class ProjectManager:
         if pending:
             await asyncio.gather(*pending, return_exceptions=True)
 
-    async def create_project(self, prompt: str, template: str | None) -> Project:
+    async def create_project(
+        self,
+        user_id: str,
+        prompt: str,
+        template: str | None,
+        db: AsyncSession,
+    ) -> Project:
         project_id = uuid4().hex
-        project_dir = self.base_dir / project_id
+        project_dir = self.base_dir / user_id / project_id
 
         def _prepare_directories() -> None:
             (project_dir / "generated-app").mkdir(parents=True, exist_ok=True)
 
         await asyncio.to_thread(_prepare_directories)
 
-        project = Project(
+        # Create database record
+        project_db = ProjectDB(
             id=project_id,
+            user_id=user_id,
             prompt=prompt,
             template=template,
-            project_dir=project_dir,
+            project_dir=str(project_dir),
+            status=ProjectStatus.PENDING.value,
+            project_metadata={},
         )
+        db.add(project_db)
+        await db.commit()
+        await db.refresh(project_db)
 
+        project = self._project_db_to_model(project_db)
+
+        # Cache in memory for quick access
         async with self._lock:
             self._projects[project_id] = project
 
@@ -110,25 +144,73 @@ class ProjectManager:
 
         return project
 
-    async def get_project(self, project_id: str) -> Project:
+    async def get_project(
+        self, project_id: str, user_id: str | None = None, db: AsyncSession | None = None
+    ) -> Project:
+        # Try memory cache first
         async with self._lock:
             project = self._projects.get(project_id)
-        if project is None:
-            raise ProjectNotFoundError(project_id)
-        return project
+            if project:
+                # Verify user ownership if user_id provided
+                if user_id is None:
+                    return project
+                # We'll need to check in DB if user_id provided
+                if db:
+                    result = await db.execute(
+                        select(ProjectDB).where(
+                            ProjectDB.id == project_id, ProjectDB.user_id == user_id
+                        )
+                    )
+                    project_db = result.scalar_one_or_none()
+                    if project_db:
+                        return project
 
-    async def update_status(self, project_id: str, status_: ProjectStatus) -> Project:
-        async with self._lock:
-            project = self._projects.get(project_id)
-            if project is None:
-                raise ProjectNotFoundError(project_id)
-            updated = project.model_copy(
-                update={
-                    "status": status_,
-                    "updated_at": datetime.now(UTC),
-                }
-            )
-            self._projects[project_id] = updated
+        # Fallback to database
+        if db:
+            query = select(ProjectDB).where(ProjectDB.id == project_id)
+            if user_id:
+                query = query.where(ProjectDB.user_id == user_id)
+            result = await db.execute(query)
+            project_db = result.scalar_one_or_none()
+            if project_db:
+                project = self._project_db_to_model(project_db)
+                async with self._lock:
+                    self._projects[project_id] = project
+                return project
+
+        raise ProjectNotFoundError(project_id)
+
+    async def update_status(
+        self,
+        project_id: str,
+        status_: ProjectStatus,
+        db: AsyncSession | None = None,
+    ) -> Project:
+        # Update in database if available
+        if db:
+            result = await db.execute(select(ProjectDB).where(ProjectDB.id == project_id))
+            project_db = result.scalar_one_or_none()
+            if project_db:
+                project_db.status = status_.value
+                project_db.updated_at = datetime.now(UTC)
+                await db.commit()
+                await db.refresh(project_db)
+                project = self._project_db_to_model(project_db)
+                async with self._lock:
+                    self._projects[project_id] = project
+        else:
+            # Fallback to memory only
+            async with self._lock:
+                project = self._projects.get(project_id)
+                if project is None:
+                    raise ProjectNotFoundError(project_id)
+                project = project.model_copy(
+                    update={
+                        "status": status_,
+                        "updated_at": datetime.now(UTC),
+                    }
+                )
+                self._projects[project_id] = project
 
         await self._publish_event(
             ProjectEvent(
@@ -138,20 +220,36 @@ class ProjectManager:
                 payload={"status": status_.value},
             )
         )
-        return updated
+        return project
 
-    async def set_preview_url(self, project_id: str, preview_url: str) -> Project:
-        async with self._lock:
-            project = self._projects.get(project_id)
-            if project is None:
-                raise ProjectNotFoundError(project_id)
-            updated = project.model_copy(
-                update={
-                    "preview_url": preview_url,
-                    "updated_at": datetime.now(UTC),
-                }
-            )
-            self._projects[project_id] = updated
+    async def set_preview_url(
+        self, project_id: str, preview_url: str, db: AsyncSession | None = None
+    ) -> Project:
+        # Update in database if available
+        if db:
+            result = await db.execute(select(ProjectDB).where(ProjectDB.id == project_id))
+            project_db = result.scalar_one_or_none()
+            if project_db:
+                project_db.preview_url = preview_url
+                project_db.updated_at = datetime.now(UTC)
+                await db.commit()
+                await db.refresh(project_db)
+                project = self._project_db_to_model(project_db)
+                async with self._lock:
+                    self._projects[project_id] = project
+        else:
+            # Fallback to memory only
+            async with self._lock:
+                project = self._projects.get(project_id)
+                if project is None:
+                    raise ProjectNotFoundError(project_id)
+                project = project.model_copy(
+                    update={
+                        "preview_url": preview_url,
+                        "updated_at": datetime.now(UTC),
+                    }
+                )
+                self._projects[project_id] = project
 
         await self._publish_event(
             ProjectEvent(
@@ -161,7 +259,7 @@ class ProjectManager:
                 payload={"preview_url": preview_url},
             )
         )
-        return updated
+        return project
 
     async def append_log(self, project_id: str, message: str) -> None:
         event = ProjectEvent(
@@ -179,7 +277,23 @@ class ProjectManager:
         adapter = FileAdapter(root)
         return await adapter.to_project_entries()
 
-    async def run_generation(self, project_id: str) -> asyncio.Task[None]:
+    async def list_user_projects(
+        self, user_id: str, db: AsyncSession, limit: int = 50, offset: int = 0
+    ) -> list[Project]:
+        """List all projects for a user."""
+        result = await db.execute(
+            select(ProjectDB)
+            .where(ProjectDB.user_id == user_id)
+            .order_by(ProjectDB.created_at.desc())
+            .limit(limit)
+            .offset(offset)
+        )
+        projects_db = result.scalars().all()
+        return [self._project_db_to_model(p) for p in projects_db]
+
+    async def run_generation(
+        self, project_id: str, db: AsyncSession | None = None
+    ) -> asyncio.Task[None]:
         async def emit(message: str) -> None:
             await self.append_log(project_id, message)
 
@@ -190,7 +304,7 @@ class ProjectManager:
                 await emit("Project not found; aborting generation.")
                 return
 
-            await self.update_status(project_id, ProjectStatus.RUNNING)
+            await self.update_status(project_id, ProjectStatus.RUNNING, db)
             await emit("Starting project generation...")
 
             generation_root = project.project_dir / "generated-app"
@@ -214,7 +328,7 @@ class ProjectManager:
                         )
                     )
                     await emit(f"Fallback generator failed: {fallback_exc}")
-                    await self.update_status(project_id, ProjectStatus.FAILED)
+                    await self.update_status(project_id, ProjectStatus.FAILED, db)
                     return None
 
                 await emit("Fallback generation completed.")
@@ -250,7 +364,7 @@ class ProjectManager:
                 )
             except Exception as exc:  # pragma: no cover - defensive guard
                 await emit(f"Post-generation step failed: {exc}")
-                await self.update_status(project_id, ProjectStatus.FAILED)
+                await self.update_status(project_id, ProjectStatus.FAILED, db)
                 return
 
             if override_preview:
@@ -258,9 +372,9 @@ class ProjectManager:
 
             preview_url = self._build_preview_url(project_id, preview_path)
             if preview_url:
-                await self.set_preview_url(project_id, preview_url)
+                await self.set_preview_url(project_id, preview_url, db)
 
-            await self.update_status(project_id, ProjectStatus.READY)
+            await self.update_status(project_id, ProjectStatus.READY, db)
             await emit("Project ready.")
 
         task: asyncio.Task[None] = asyncio.create_task(
