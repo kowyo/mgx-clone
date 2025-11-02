@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useSession, authClient } from "@/lib/auth-client"
+import { useSession, getJWTToken } from "@/lib/auth-client"
 
 export type LogEntry = { type: "info" | "error" | "success"; message: string }
 type InlineGeneratedFile = { path?: string; content?: string | null }
@@ -64,25 +64,16 @@ export function useGenerationSession(): UseGenerationSessionReturn {
   const getAuthHeaders = useCallback(async () => {
     const headers: Record<string, string> = { "Content-Type": "application/json" }
     
-    // Fetch JWT token from better-auth if session exists
-    if (session?.session) {
-      try {
-        const { data, error } = await authClient.token()
-        if (error) {
-          console.error("Failed to get JWT token:", error)
-          // Continue without token - backend can try to use cookies as fallback
-        } else if (data?.token) {
-          headers["Authorization"] = `Bearer ${data.token}`
-        } else {
-          console.warn("Token endpoint returned no token data")
-        }
-      } catch (error) {
-        console.error("Error fetching JWT token:", error)
-        // Continue without token - backend can try to use cookies as fallback
-      }
-    } else {
+    // Fetch JWT token using the centralized helper function
+    const token = await getJWTToken(session)
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`
+    } else if (!session?.session) {
       console.warn("No session found, requests will fail if authentication is required")
+      // Continue without token - backend can try to use cookies as fallback
     }
+    // If session exists but token fetch failed, continue without token
+    // The backend can try to use cookies as fallback
     
     return headers
   }, [session])
@@ -236,18 +227,9 @@ export function useGenerationSession(): UseGenerationSessionReturn {
         }
         
         // Add authentication token to preview URLs
-        if (session?.session) {
-          try {
-            const { data, error } = await authClient.token()
-            if (!error && data?.token) {
-              // Only add token if it's not already present
-              if (!url.searchParams.has("token")) {
-                url.searchParams.set("token", data.token)
-              }
-            }
-          } catch (error) {
-            console.error("Error fetching token for preview URL:", error)
-          }
+        const token = await getJWTToken(session)
+        if (token && !url.searchParams.has("token")) {
+          url.searchParams.set("token", token)
         }
         
         return url.toString()
