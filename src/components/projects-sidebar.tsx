@@ -80,7 +80,7 @@ export function ProjectsSidebar({ onProjectClick }: ProjectsSidebarProps) {
     <Sidebar collapsible="icon">
       <SidebarHeader className="p-0">
         <div className="flex items-center gap-2 px-4 h-12 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
-          <SidebarTrigger className="size-6 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:rounded-lg group-data-[collapsible=icon]:bg-primary/10" />
+          <SidebarTrigger className="size-6 group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:rounded-lg" />
           <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
             <span className="font-semibold text-sm">My Projects</span>
             <span className="text-xs text-muted-foreground">
