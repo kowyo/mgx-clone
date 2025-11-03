@@ -156,11 +156,11 @@ export function useGenerationSession(): UseGenerationSessionReturn {
       onStatusUpdated: (status) => {
         setProjectStatus(status)
         addLog(status === "ready" ? "success" : "info", `Status changed to ${status}`)
-        updateActiveAssistantMessage(() => ({
-          content:
-            status === "ready"
-              ? "Your app is ready. Open the preview to explore the result."
-              : `Status updated: ${status}`,
+        const statusMessage = status === "ready"
+          ? "Your app is ready. Open the preview to explore the result."
+          : `Status updated: ${status}`
+        updateActiveAssistantMessage((msg) => ({
+          content: msg.content ? `${msg.content}\n\n${statusMessage}`.trim() : statusMessage,
           status: status === "failed" ? "error" : status === "ready" ? "complete" : "pending",
         }))
       },
@@ -170,20 +170,57 @@ export function useGenerationSession(): UseGenerationSessionReturn {
       onPreviewReady: (preview) => {
         updatePreview(preview)
         addLog("success", "Preview ready")
-        updateActiveAssistantMessage(() => ({
-          content: "Preview is ready in the right panel.",
+        updateActiveAssistantMessage((msg) => ({
+          content: msg.content ? `${msg.content}\n\nPreview is ready in the right panel.` : "Preview is ready in the right panel.",
           status: "complete",
         }))
       },
       onError: (message) => {
         addLog("error", message)
-        updateActiveAssistantMessage(() => ({ content: message, status: "error" }))
+        updateActiveAssistantMessage((msg) => ({
+          content: msg.content ? `${msg.content}\n\n❌ Error: ${message}` : message,
+          status: "error",
+        }))
         setProjectStatus("failed")
       },
       onProjectCreated: (message) => {
         addLog("info", message)
         updateActiveAssistantMessage((msg) => ({
           content: `${msg.content}\n${message}`.trim(),
+        }))
+      },
+      onAssistantMessage: (payload) => {
+        const text = payload.text || ""
+        if (text) {
+          updateActiveAssistantMessage((msg) => ({
+            content: msg.content ? `${msg.content}\n${text}`.trim() : text,
+            status: "pending",
+          }))
+        }
+      },
+      onToolUse: (payload) => {
+        const toolName = payload.name || "Tool"
+        const inputStr = payload.input ? JSON.stringify(payload.input, null, 2) : ""
+        const toolMessage = `🔧 Using ${toolName}${inputStr ? `:\n\`\`\`json\n${inputStr}\n\`\`\`` : ""}`
+        updateActiveAssistantMessage((msg) => ({
+          content: msg.content ? `${msg.content}\n\n${toolMessage}`.trim() : toolMessage,
+          status: "pending",
+        }))
+      },
+      onResultMessage: (payload) => {
+        const cost = payload.total_cost_usd
+        const usage = payload.usage
+        const costStr = cost !== undefined ? `$${cost.toFixed(4)}` : ""
+        const tokensStr = usage 
+          ? `${usage.input_tokens || 0} input + ${usage.output_tokens || 0} output tokens`
+          : ""
+        const resultParts = [costStr, tokensStr].filter(Boolean)
+        const resultMessage = resultParts.length > 0 
+          ? `✅ Complete (${resultParts.join(", ")})`
+          : "✅ Complete"
+        updateActiveAssistantMessage((msg) => ({
+          content: msg.content ? `${msg.content}\n\n${resultMessage}`.trim() : resultMessage,
+          status: "complete",
         }))
       },
       addLog,

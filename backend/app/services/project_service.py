@@ -294,25 +294,58 @@ class ProjectManager:
     async def run_generation(
         self, project_id: str, db: AsyncSession | None = None
     ) -> asyncio.Task[None]:
-        async def emit(message: str) -> None:
+        async def emit_log(message: str) -> None:
             await self.append_log(project_id, message)
+
+        async def emit_claude_message(event_data: dict[str, Any]) -> None:
+            """Emit structured Claude messages as ProjectEvents."""
+            event_type = event_data.get("type")
+            payload = event_data.get("payload", {})
+            
+            if event_type == "assistant_message":
+                await self._publish_event(
+                    ProjectEvent(
+                        project_id=project_id,
+                        type=ProjectEventType.ASSISTANT_MESSAGE,
+                        message=None,
+                        payload=payload,
+                    )
+                )
+            elif event_type == "tool_use":
+                await self._publish_event(
+                    ProjectEvent(
+                        project_id=project_id,
+                        type=ProjectEventType.TOOL_USE,
+                        message=None,
+                        payload=payload,
+                    )
+                )
+            elif event_type == "result_message":
+                await self._publish_event(
+                    ProjectEvent(
+                        project_id=project_id,
+                        type=ProjectEventType.RESULT_MESSAGE,
+                        message=None,
+                        payload=payload,
+                    )
+                )
 
         async def worker() -> None:
             try:
                 project = await self.get_project(project_id)
             except ProjectNotFoundError:
-                await emit("Project not found; aborting generation.")
+                await emit_log("Project not found; aborting generation.")
                 return
 
             await self.update_status(project_id, ProjectStatus.RUNNING, db)
-            await emit("Starting project generation...")
+            await emit_log("Starting project generation...")
 
             generation_root = project.project_dir / "generated-app"
             preview_path: str | None = None
 
             async def run_fallback(reason: str) -> str | None:
-                await emit(reason)
-                await emit("Falling back to local scaffold generator...")
+                await emit_log(reason)
+                await emit_log("Falling back to local scaffold generator...")
                 try:
                     outcome = await self._fallback_generator.generate(
                         generation_root,
@@ -327,24 +360,24 @@ class ProjectManager:
                             payload={"detail": str(fallback_exc)},
                         )
                     )
-                    await emit(f"Fallback generator failed: {fallback_exc}")
+                    await emit_log(f"Fallback generator failed: {fallback_exc}")
                     await self.update_status(project_id, ProjectStatus.FAILED, db)
                     return None
 
-                await emit("Fallback generation completed.")
+                await emit_log("Fallback generation completed.")
                 return outcome.preview_path
 
             try:
                 if self._claude_service and self._claude_service.is_available:
-                    await emit("Invoking Claude service...")
+                    await emit_log("Invoking Claude service...")
                     outcome = await self._claude_service.generate(
                         prompt=project.prompt,
                         project_root=generation_root,
                         template=project.template,
-                        emit=emit,
+                        emit=emit_claude_message,
                     )
                     preview_path = outcome.preview_path
-                    await emit("Claude generation finished.")
+                    await emit_log("Claude generation finished.")
                 else:
                     preview_path = await run_fallback(
                         "Claude service unavailable or not configured."
@@ -360,10 +393,10 @@ class ProjectManager:
             try:
                 override_preview = await self._run_post_generation_steps(
                     generation_root,
-                    emit,
+                    emit_log,
                 )
             except Exception as exc:  # pragma: no cover - defensive guard
-                await emit(f"Post-generation step failed: {exc}")
+                await emit_log(f"Post-generation step failed: {exc}")
                 await self.update_status(project_id, ProjectStatus.FAILED, db)
                 return
 
@@ -375,7 +408,7 @@ class ProjectManager:
                 await self.set_preview_url(project_id, preview_url, db)
 
             await self.update_status(project_id, ProjectStatus.READY, db)
-            await emit("Project ready.")
+            await emit_log("Project ready.")
 
         task: asyncio.Task[None] = asyncio.create_task(
             worker(), name=f"project-generation:{project_id}"

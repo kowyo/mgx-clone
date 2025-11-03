@@ -22,7 +22,14 @@ class DirectoryListingEntry:
 
 
 class FileAdapter:
-    """Async helper for sandboxed filesystem interactions."""
+    """Async helper for sandboxed filesystem interactions.
+    
+    Note: This adapter is used for:
+    - Listing project files for the UI (via ProjectManager.list_files)
+    - Fallback generator operations
+    It is NOT part of the Claude Agent SDK tool system. Claude uses its
+    built-in Read and Write tools for code generation operations.
+    """
 
     def __init__(self, base_dir: Path) -> None:
         self._base_dir = base_dir.resolve()

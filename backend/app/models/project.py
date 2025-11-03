@@ -30,6 +30,9 @@ class ProjectEventType(str, Enum):
     LOG_APPENDED = "log_appended"
     PREVIEW_READY = "preview_ready"
     ERROR = "error"
+    ASSISTANT_MESSAGE = "assistant_message"
+    TOOL_USE = "tool_use"
+    RESULT_MESSAGE = "result_message"
 
 
 class Project(BaseModel):

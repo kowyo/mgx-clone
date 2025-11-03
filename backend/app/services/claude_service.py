@@ -7,9 +7,19 @@ from pathlib import Path
 from typing import Any
 
 try:  # pragma: no cover - import guarded for environments without SDK
-    from claude_agent_sdk import ClaudeSDKClient
+    from claude_agent_sdk import (
+        AssistantMessage,
+        ClaudeSDKClient,
+        ResultMessage,
+        TextBlock,
+        ToolUseBlock,
+    )
 except ImportError:  # pragma: no cover - SDK not installed
     ClaudeSDKClient = None  # type: ignore[assignment]
+    AssistantMessage = None  # type: ignore[assignment,misc]
+    ResultMessage = None  # type: ignore[assignment,misc]
+    TextBlock = None  # type: ignore[assignment,misc]
+    ToolUseBlock = None  # type: ignore[assignment,misc]
 
 from app.tools.builders import build_claude_options
 
@@ -26,7 +36,7 @@ class ClaudeServiceUnavailable(RuntimeError):
 
 
 class ClaudeService:
-    """Thin wrapper around the Claude Agent SDK that streams logs via a callback."""
+    """Thin wrapper around the Claude Agent SDK that streams messages via a callback."""
 
     def __init__(self, allowed_commands: Sequence[str]) -> None:
         self._allowed_commands = list(allowed_commands)
@@ -40,8 +50,9 @@ class ClaudeService:
         prompt: str,
         project_root: Path,
         template: str | None,
-        emit: Callable[[str], Awaitable[None]],
+        emit: Callable[[dict[str, Any]], Awaitable[None]],
     ) -> ClaudeGenerationOutcome:
+        """Generate code using Claude Agent SDK and emit structured messages."""
         if not self.is_available:
             raise ClaudeServiceUnavailable("Claude API key is not configured")
 
@@ -50,49 +61,93 @@ class ClaudeService:
 
         options = build_claude_options(project_root, self._allowed_commands)
         async with ClaudeSDKClient(options=options) as client:  # type: ignore[arg-type]
-            await client.query(self._compose_prompt(prompt, template))
-            async for message in client.receive_response():
-                text = self._format_message(message)
-                if text:
-                    await emit(text)
+            await client.query(prompt=self._compose_prompt(prompt, template))
+
+            async for message in client.receive_messages():
+                if isinstance(message, AssistantMessage):
+                    await self._emit_assistant_message(message, emit)
+                elif isinstance(message, ResultMessage):
+                    await self._emit_result_message(message, emit)
+                    break
+
         return ClaudeGenerationOutcome(preview_path="index.html")
+
+    async def _emit_assistant_message(
+        self,
+        message: Any,
+        emit: Callable[[dict[str, Any]], Awaitable[None]],
+    ) -> None:
+        """Emit an AssistantMessage event and individual ToolUseBlock events."""
+        text_blocks = []
+
+        for block in getattr(message, "content", []):
+            if isinstance(block, TextBlock):
+                text_blocks.append(block.text)
+            elif isinstance(block, ToolUseBlock):
+                # Emit individual tool use events
+                await emit(
+                    {
+                        "type": "tool_use",
+                        "payload": {
+                            "id": getattr(block, "id", None),
+                            "name": getattr(block, "name", None),
+                            "input": getattr(block, "input", None),
+                        },
+                    }
+                )
+
+        # Emit assistant message if there's text content
+        if text_blocks:
+            payload = {
+                "model": getattr(message, "model", None),
+                "stop_reason": getattr(message, "stop_reason", None),
+                "text": "\n".join(text_blocks),
+            }
+
+            await emit(
+                {
+                    "type": "assistant_message",
+                    "payload": payload,
+                }
+            )
+
+    async def _emit_result_message(
+        self,
+        message: Any,
+        emit: Callable[[dict[str, Any]], Awaitable[None]],
+    ) -> None:
+        """Emit a ResultMessage event."""
+        usage = getattr(message, "usage", None)
+        usage_dict = {}
+        if usage:
+            usage_dict = {
+                "input_tokens": getattr(usage, "input_tokens", None),
+                "output_tokens": getattr(usage, "output_tokens", None),
+            }
+
+        await emit(
+            {
+                "type": "result_message",
+                "payload": {
+                    "total_cost_usd": getattr(message, "total_cost_usd", None),
+                    "stop_reason": getattr(message, "stop_reason", None),
+                    "usage": usage_dict,
+                },
+            }
+        )
 
     def _compose_prompt(self, prompt: str, template: str | None) -> str:
         base_intro = (
-            "You are Claude, an expert full-stack engineer. "
-            "Follow best practices, structure the project cleanly, "
-            "and ensure the app runs with pnpm. "
-            "Always include a complete package.json with dev/build scripts appropriate for pnpm, "
-            "and do not add a custom 'install' script; pnpm handles installs automatically."
+            "To create a new project, always use the following command to generate the initial template: "
+            "'pnpm create next-app@latest <project-name> --yes'. "
+            "After generating the template project, only modify the necessary code to fulfill the user's instructions. "
+            'After making code changes, modify `next.config.js` to set `output: "export"` for static export, '
+            "And then run `pnpm build` to generate static files in the `out` directory. Then your task is complete if no error occurs."
         )
         if template:
             return (
                 f"{base_intro}\n"
-                f"Build a complete {template} application based on the user's instructions.\n"
+                f"Modify the generated {template} application according to the user's instructions.\n"
                 f"User prompt: {prompt}"
             )
-        return (
-            f"{base_intro}\n"
-            "Generate a fully working modern React, Vite, or Next.js application "
-            "based on the user's instructions.\n"
-            f"User prompt: {prompt}"
-        )
-
-    def _format_message(self, message: Any) -> str:
-        message_type = type(message).__name__
-        content = getattr(message, "content", None)
-        if isinstance(content, list):
-            texts = []
-            for block in content:
-                text = getattr(block, "text", None)
-                if text:
-                    texts.append(text)
-            if texts:
-                return "\n".join(texts)
-        tool_name = getattr(message, "tool_name", None)
-        if tool_name:
-            args = getattr(message, "args", None)
-            return f"[tool:{tool_name}] {args}"
-        if hasattr(message, "event"):
-            return f"[{message_type}] {message.event}"  # type: ignore[attr-defined]
-        return f"[{message_type}]"
+        return f"{base_intro}\nUser prompt: {prompt}"

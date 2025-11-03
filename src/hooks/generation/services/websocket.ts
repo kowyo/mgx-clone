@@ -9,6 +9,9 @@ export type WebSocketMessageHandler = {
   onPreviewReady: (previewUrl: string) => void
   onError: (message: string) => void
   onProjectCreated: (message: string) => void
+  onAssistantMessage: (payload: { text?: string; model?: string; stop_reason?: string }) => void
+  onToolUse: (payload: { id?: string; name?: string; input?: unknown }) => void
+  onResultMessage: (payload: { total_cost_usd?: number; stop_reason?: string; usage?: { input_tokens?: number; output_tokens?: number } }) => void
   addLog: (type: LogEntry["type"], message: string) => void
   updateActiveAssistantMessage: (
     next: Partial<ConversationMessage> | ((message: ConversationMessage) => Partial<ConversationMessage>),
@@ -95,6 +98,21 @@ const handleWebSocketMessage = (raw: string, handlers: WebSocketMessageHandler):
 
     if (data.type === "project_created" && typeof data.message === "string") {
       handlers.onProjectCreated(data.message)
+      return
+    }
+
+    if (data.type === "assistant_message" && data.payload) {
+      handlers.onAssistantMessage(data.payload)
+      return
+    }
+
+    if (data.type === "tool_use" && data.payload) {
+      handlers.onToolUse(data.payload)
+      return
+    }
+
+    if (data.type === "result_message" && data.payload) {
+      handlers.onResultMessage(data.payload)
       return
     }
   } catch (error) {

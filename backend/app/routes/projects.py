@@ -240,8 +240,39 @@ async def get_project_file_content(
             detail="Path points to a directory",
         )
 
-    content = await asyncio.to_thread(absolute.read_text, encoding="utf-8")
-    return PlainTextResponse(content)
+    # Define binary file extensions that cannot be read as text
+    binary_extensions = {
+        # Images (SVG is text-based, so we try to read it and catch errors)
+        ".ico", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tiff", ".tif",
+        # Fonts
+        ".woff", ".woff2", ".ttf", ".otf", ".eot",
+        # Archives
+        ".zip", ".tar", ".gz", ".bz2", ".xz", ".7z", ".rar",
+        # Executables
+        ".exe", ".bin", ".dll", ".so", ".dylib",
+        # Other binary formats
+        ".pdf", ".mp4", ".mp3", ".avi", ".mov", ".wav",
+    }
+
+    # Check if file has a binary extension
+    if absolute.suffix.lower() in binary_extensions:
+        return PlainTextResponse(
+            f"[Binary file: {absolute.suffix or 'no extension'}]\n"
+            "This file cannot be displayed as text in the code viewer.",
+            status_code=status.HTTP_200_OK,
+        )
+
+    # Try to read as UTF-8, but handle binary files gracefully
+    try:
+        content = await asyncio.to_thread(absolute.read_text, encoding="utf-8")
+        return PlainTextResponse(content)
+    except UnicodeDecodeError:
+        # File appears to be binary despite not having a recognized extension
+        return PlainTextResponse(
+            "[Binary file]\n"
+            "This file cannot be displayed as text in the code viewer.",
+            status_code=status.HTTP_200_OK,
+        )
 
 
 @router.get("/{project_id}/preview", response_model=ProjectPreviewResponse)
