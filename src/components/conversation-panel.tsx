@@ -89,7 +89,7 @@ export function ConversationPanel({
             </p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2">
             {orderedMessages.map((message) => {
               const isUser = message.role === "user"
 
@@ -97,8 +97,8 @@ export function ConversationPanel({
                 <Message from={message.role} key={message.id}>
                   <div
                     className={cn(
-                      "flex max-w-[80%] flex-col gap-2",
-                      isUser ? "items-end" : "items-start",
+                      "flex flex-col gap-2",
+                      isUser ? "max-w-[80%] items-end" : "w-full items-start",
                     )}
                   >
                     <MessageContent>

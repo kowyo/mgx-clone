@@ -1,10 +1,11 @@
 {
   "mcpServers": {
-    "shadcn": {
+    "ai-elements": {
       "command": "npx",
       "args": [
-        "shadcn@latest",
-        "mcp"
+        "-y",
+        "mcp-remote",
+        "https://registry.ai-sdk.dev/api/mcp"
       ]
     }
   }
