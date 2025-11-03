@@ -34,6 +34,7 @@ import {
 } from "lucide-react"
 import { useSession, signIn } from "@/lib/auth-client"
 import { GoogleLogo } from "@/components/auth-button"
+import { Streamdown } from "streamdown"
 
 interface ConversationPanelProps {
   messages: ConversationMessage[]
@@ -102,9 +103,19 @@ export function ConversationPanel({
                         isUser ? "max-w-[80%] items-end" : "w-full items-start",
                       )}
                     >
-                      <MessageContent variant="flat">
-                        <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
-                      </MessageContent>
+                      {isUser ? (
+                        <MessageContent variant="flat">
+                          <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                        </MessageContent>
+                      ) : (
+                        <MessageContent variant="flat">
+                          <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <Streamdown isAnimating={message.status === "pending"}>
+                              {message.content}
+                            </Streamdown>
+                          </div>
+                        </MessageContent>
+                      )}
                       {!isUser && message.status !== "complete" && (
                         <Badge variant="outline" className="gap-2 text-[11px]">
                           {message.status === "pending" && <Loader2 className="h-3 w-3 animate-spin" />}
