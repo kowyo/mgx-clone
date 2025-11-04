@@ -21,9 +21,10 @@ ENV PYTHONUNBUFFERED=1 \
     CLAUDE_APP_PROJECTS_ROOT=/data/projects
 
 RUN apt-get update && \
-    apt-get install -y curl && \
+    apt-get install -y curl bash && \
     curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
     apt-get install -y nodejs && \
+    corepack enable && \
     npm install -g @anthropic-ai/claude-code && \
     rm -rf /var/lib/apt/lists/*
 
