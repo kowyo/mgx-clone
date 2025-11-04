@@ -13,7 +13,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile
 COPY . .
 RUN npx @better-auth/cli migrate --yes
-RUN pnpm run build
+RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
+    pnpm run build
 
 FROM base AS runner
 WORKDIR /app
