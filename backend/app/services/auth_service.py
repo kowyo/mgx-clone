@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from functools import partial
 
 import jwt
 from fastapi import HTTPException, status
@@ -17,12 +16,18 @@ from app.models.user import User
 class AuthService:
     """Service for handling authentication and user management."""
 
-    def __init__(self, secret_key: str, better_auth_url: str):
+    def __init__(
+        self,
+        secret_key: str,
+        better_auth_url: str,
+        better_auth_internal_url: str | None = None,
+    ):
         self.secret_key = secret_key
         self.better_auth_url = better_auth_url.rstrip("/")
+        internal_base_url = (better_auth_internal_url or better_auth_url).rstrip("/")
         # Initialize PyJWKClient for fetching JWKS
         self.jwks_client = PyJWKClient(
-            f"{self.better_auth_url}/api/auth/jwks",
+            f"{internal_base_url}/api/auth/jwks",
             cache_keys=True,
             max_cached_keys=16,
             lifespan=300,  # Cache for 5 minutes
@@ -39,8 +44,8 @@ class AuthService:
                 # Get the signing key from JWKS using PyJWKClient
                 signing_key = self.jwks_client.get_signing_key_from_jwt(token)
 
-                # Decode token without verification first to see the claims
-                unverified = jwt.decode(token, options={"verify_signature": False})
+                # Decode token without verification to fail fast on malformed tokens
+                jwt.decode(token, options={"verify_signature": False})
                 
                 # Better-auth uses the baseURL as issuer and audience
                 issuer = self.better_auth_url
@@ -126,5 +131,6 @@ class AuthService:
 auth_service = AuthService(
     secret_key=settings.better_auth_secret,
     better_auth_url=settings.better_auth_url,
+    better_auth_internal_url=settings.better_auth_internal_url,
 )
 

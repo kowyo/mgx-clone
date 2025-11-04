@@ -5,6 +5,8 @@ services:
       dockerfile: docker/Dockerfile.backend
     env_file:
       - ../backend/.env
+    environment:
+      CLAUDE_APP_BETTER_AUTH_INTERNAL_URL: http://frontend:3000
     volumes:
       - projects-data:/data/projects
     ports:
