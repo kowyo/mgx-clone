@@ -17,10 +17,11 @@ import { Button } from "@/components/ui/button"
 import {
   PromptInput,
   PromptInputTextarea,
-  PromptInputToolbar,
   PromptInputSubmit,
-} from "@/components/ui/shadcn-io/ai/prompt-input"
-import { Message, MessageContent } from "@/components/ui/shadcn-io/ai/message"
+  PromptInputFooter,
+  PromptInputTools,
+} from "@/components/ai-elements/prompt-input"
+import { Message, MessageContent } from "@/components/ai-elements/message"
 import {
   Conversation,
   ConversationContent,
@@ -57,7 +58,10 @@ export function ConversationPanel({
   )
   const disableSend = isGenerating || !prompt.trim()
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (
+    message: { text?: string; files?: any[] },
+    event: FormEvent<HTMLFormElement>
+  ) => {
     event.preventDefault()
 
     // Check if user is logged in
@@ -65,7 +69,6 @@ export function ConversationPanel({
       setShowLoginDialog(true)
       return
     }
-
     void onSubmit()
   }
 
@@ -137,27 +140,22 @@ export function ConversationPanel({
         <ConversationScrollButton />
       </Conversation>
 
-      <footer className="border-t border-none p-2">
-        <PromptInput onSubmit={handleSubmit}>
-          <PromptInputTextarea
-            value={prompt}
-            onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
-              onPromptChange(event.target.value)
-            }
-            placeholder="What do you want to build today?"
-            disabled={isGenerating}
-          />
-          <PromptInputToolbar>
-            {isGenerating && (
-              <Badge variant="secondary" className="gap-1 mr-auto">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                Generating
-              </Badge>
-            )}
-            <PromptInputSubmit disabled={disableSend} />
-          </PromptInputToolbar>
-        </PromptInput>
-      </footer>
+      <PromptInput onSubmit={handleSubmit} className="p-2 relative">
+        <PromptInputTextarea
+          name="message"
+          value={prompt}
+          onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
+            onPromptChange(e.target.value)
+          }
+          disabled={isGenerating}
+          placeholder="What do you want to build today?"
+        />
+        <PromptInputFooter>
+          <PromptInputTools>
+          </PromptInputTools>
+          <PromptInputSubmit disabled={disableSend} status={"ready"} />
+        </PromptInputFooter>
+      </PromptInput>
 
       <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
         <DialogContent>
