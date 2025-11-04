@@ -187,6 +187,24 @@ The backend provides RESTful API endpoints and WebSocket connections for managin
   - **Response**: Project status, timestamps, preview URL
   - **Auth**: Required
 
+- **GET /api/projects/{project_id}/messages**
+  - **Description**: Retrieve the full persisted conversation for a project, including user prompts and assistant responses
+  - **Response**: Ordered list of conversation messages with metadata (role, status, timestamps)
+  - **Auth**: Required
+
+- **POST /api/projects/{project_id}/messages**
+  - **Description**: Add a follow-up user message to an existing project and trigger a new generation turn
+  - **Request Body**:
+    ```json
+    {
+      "content": "string",
+      "assistant_intro": "string (optional)"
+    }
+    ```
+  - **Response**: Newly created user message and updated project status
+  - **Status Code**: 202 Accepted
+  - **Auth**: Required
+
 - **GET /api/projects/{project_id}/files**
   - **Description**: Get file tree structure for a project
   - **Response**: Hierarchical file list with metadata

@@ -1,0 +1,31 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    env_file:
+      - ../backend/.env
+    environment:
+      CLAUDE_APP_BETTER_AUTH_INTERNAL_URL: http://frontend:3000
+    volumes:
+      - projects-data:/data/projects
+    ports:
+      - "8000:8000"
+    restart: always
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    env_file:
+      - ../.env.local
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8000/api
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    restart: always
+
+volumes:
+  projects-data:

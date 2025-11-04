@@ -9,7 +9,8 @@ export const createMessageId = () => {
 
 export const beginConversationTurn = (
   userContent: string,
-  assistantIntro = "Working on your app...",
+  assistantIntro = "",
+  projectId?: string | null,
 ): { userMessage: ConversationMessage; assistantMessage: ConversationMessage } | null => {
   const trimmed = userContent.trim()
   if (!trimmed) {
@@ -23,6 +24,7 @@ export const beginConversationTurn = (
     status: "complete",
     createdAt: timestamp,
     updatedAt: timestamp,
+    projectId: projectId ?? null,
   }
   const assistantMessage: ConversationMessage = {
     id: createMessageId(),
@@ -31,6 +33,7 @@ export const beginConversationTurn = (
     status: "pending",
     createdAt: timestamp,
     updatedAt: timestamp,
+    projectId: projectId ?? null,
   }
   return { userMessage, assistantMessage }
 }

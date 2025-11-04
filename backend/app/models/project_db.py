@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from pathlib import Path
 
 from sqlalchemy import Column, DateTime, ForeignKey, JSON, String, Text
 from sqlalchemy.orm import relationship
@@ -27,4 +26,10 @@ class ProjectDB(Base):
 
     # Relationship to user (many-to-one)
     user = relationship("User", back_populates="projects")
+    messages = relationship(
+        "ProjectMessageDB",
+        back_populates="project",
+        cascade="all, delete-orphan",
+        order_by="ProjectMessageDB.sequence",
+    )
 

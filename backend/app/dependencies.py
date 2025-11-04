@@ -109,6 +109,42 @@ async def get_current_user(
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
+async def get_current_user_optional(
+    request: Request,
+    db: AsyncDBSession,
+    authorization: Annotated[str | None, Header()] = None,
+    token: Annotated[str | None, Query()] = None,
+) -> User | None:
+    """Optional dependency to get current authenticated user from bearer token,
+    cookie, or query parameter. Returns None if no token is found instead of raising an error."""
+    
+    # Get all cookies from request headers
+    cookies_str = request.headers.get("cookie", "")
+    
+    # Try to extract token from various sources
+    token_value = _extract_token_from_request(
+        authorization=authorization,
+        cookie=cookies_str,
+        token_param=token,
+    )
+    
+    if not token_value:
+        # No token found, return None (don't raise error)
+        return None
+
+    try:
+        user = await auth_service.get_user_from_token(token_value, db)
+        # Store the token in request state so it can be accessed by endpoints
+        request.state.auth_token = token_value
+        return user
+    except Exception:
+        # If token validation fails, return None instead of raising
+        return None
+
+
+OptionalUser = Annotated[User | None, Depends(get_current_user_optional)]
+
+
 def get_project_manager() -> ProjectManager:
     """FastAPI dependency that returns the shared project manager."""
 

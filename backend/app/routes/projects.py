@@ -9,14 +9,18 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import PlainTextResponse, Response
 
-from app.dependencies import AsyncDBSession, CurrentUser, get_project_manager
+from app.dependencies import AsyncDBSession, CurrentUser, OptionalUser, get_project_manager
 from app.models.api import (
     ProjectFilesResponse,
     ProjectListItem,
     ProjectListResponse,
+    ProjectMessageCreateRequest,
+    ProjectMessageCreateResponse,
+    ProjectMessagesResponse,
     ProjectPreviewResponse,
     ProjectStatusResponse,
 )
+from app.models.project import ProjectStatus
 from app.services.project_service import ProjectManager, ProjectNotFoundError
 from app.tools.exceptions import PathValidationError
 from app.tools.path_utils import resolve_project_path
@@ -185,6 +189,73 @@ async def get_project_status(
     )
 
 
+@router.get("/{project_id}/messages", response_model=ProjectMessagesResponse)
+async def get_project_messages(
+    project_id: str,
+    manager: ProjectManagerDep,
+    current_user: CurrentUser,
+    db: AsyncDBSession,
+) -> ProjectMessagesResponse:
+    try:
+        await manager.get_project(project_id, user_id=current_user.id, db=db)
+    except ProjectNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    messages = await manager.list_messages(project_id, db=db)
+    return ProjectMessagesResponse(project_id=project_id, messages=messages)
+
+
+@router.post(
+    "/{project_id}/messages",
+    response_model=ProjectMessageCreateResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+async def create_project_message(
+    project_id: str,
+    payload: ProjectMessageCreateRequest,
+    manager: ProjectManagerDep,
+    current_user: CurrentUser,
+    db: AsyncDBSession,
+) -> ProjectMessageCreateResponse:
+    try:
+        project = await manager.get_project(project_id, user_id=current_user.id, db=db)
+    except ProjectNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    if project.status == ProjectStatus.RUNNING:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Project generation already running",
+        )
+
+    content = payload.content.strip()
+    if not content:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Message content cannot be empty",
+        )
+
+    user_message = await manager.record_user_message(project_id, content, db)
+
+    await manager.update_status(project_id, ProjectStatus.PENDING, db)
+
+    intro = (payload.assistant_intro or "").strip()
+
+    await manager.run_generation(
+        project_id,
+        prompt_override=content,
+        user_message_id=user_message.id,
+        assistant_intro=intro,
+        db=db,
+    )
+
+    return ProjectMessageCreateResponse(
+        project_id=project_id,
+        user_message=user_message,
+        status=ProjectStatus.PENDING,
+    )
+
+
 @router.get("/{project_id}/files", response_model=ProjectFilesResponse)
 async def list_project_files(
     project_id: str,
@@ -296,14 +367,22 @@ async def fetch_preview_asset(
     project_id: str,
     asset_path: str,
     manager: ProjectManagerDep,
-    current_user: CurrentUser,
+    current_user: OptionalUser,
     db: AsyncDBSession,
-    token: str | None = None,
 ) -> Response:
-    try:
-        project = await manager.get_project(project_id, user_id=current_user.id, db=db)
-    except ProjectNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    # If user is authenticated, validate ownership
+    if current_user is not None:
+        try:
+            project = await manager.get_project(project_id, user_id=current_user.id, db=db)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    else:
+        # If no authentication, still allow access but don't validate ownership
+        # This is needed for Docker/iframe scenarios where cookies might not be forwarded
+        try:
+            project = await manager.get_project(project_id, user_id=None, db=db)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     preview_root = (project.project_dir / "generated-app").resolve()
 

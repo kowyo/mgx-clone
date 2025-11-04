@@ -46,6 +46,10 @@ class Settings(BaseSettings):
         default="http://localhost:3000",
         description="Better-auth base URL",
     )
+    better_auth_internal_url: str | None = Field(
+        default=None,
+        description="Internal URL for contacting better-auth from backend (optional)",
+    )
 
 
 @lru_cache(maxsize=1)

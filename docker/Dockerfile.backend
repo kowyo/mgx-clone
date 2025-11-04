@@ -1,0 +1,37 @@
+FROM python:3.14-slim AS base
+ENV UV_SYSTEM_PYTHON=1 \
+    UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+WORKDIR /app
+
+FROM base AS deps
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --no-dev --no-editable
+
+FROM deps AS builder
+COPY backend/app ./app
+RUN uv run python -m compileall app
+
+FROM python:3.14-slim AS runner
+ENV PYTHONUNBUFFERED=1 \
+    UV_SYSTEM_PYTHON=1 \
+    PATH="/app/.venv/bin:${PATH}" \
+    CLAUDE_APP_PROJECTS_ROOT=/data/projects
+
+RUN apt-get update && \
+    apt-get install -y curl bash && \
+    curl -fsSL https://deb.nodesource.com/setup_24.x | bash - && \
+    apt-get install -y nodejs && \
+    corepack enable && \
+    npm install -g @anthropic-ai/claude-code && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+WORKDIR /app
+COPY --from=deps /app/.venv ./.venv
+COPY --from=builder /app/app ./app
+VOLUME ["/data/projects"]
+EXPOSE 8000
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

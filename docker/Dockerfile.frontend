@@ -1,0 +1,37 @@
+FROM node:24-alpine AS base
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV CI=true
+RUN apk add --no-cache libc6-compat && \
+    corepack enable
+WORKDIR /app
+
+FROM base AS builder
+COPY package.json pnpm-lock.yaml ./
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+    pnpm install --frozen-lockfile
+COPY . .
+RUN npx @better-auth/cli migrate --yes
+RUN pnpm run build
+
+FROM base AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder /app/auth.db ./auth.db
+RUN chown -R nextjs:nodejs /app && \
+    chmod 775 /app && \
+    chmod 664 /app/auth.db
+USER nextjs
+
+EXPOSE 3000
+ENV PORT=3000
+
+ENV HOSTNAME="0.0.0.0"
+CMD ["node", "server.js"]

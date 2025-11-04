@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from .project import ProjectEvent, ProjectStatus
+from .project_message import ProjectMessage
 
 
 class ProjectGenerateRequest(BaseModel):
@@ -44,6 +45,22 @@ class ProjectFilesResponse(BaseModel):
 class ProjectPreviewResponse(BaseModel):
     project_id: str
     preview_url: str | None = None
+
+
+class ProjectMessagesResponse(BaseModel):
+    project_id: str
+    messages: list[ProjectMessage] = Field(default_factory=list)
+
+
+class ProjectMessageCreateRequest(BaseModel):
+    content: str = Field(..., min_length=1, max_length=4096)
+    assistant_intro: str | None = Field(default=None, max_length=512)
+
+
+class ProjectMessageCreateResponse(BaseModel):
+    project_id: str
+    user_message: ProjectMessage
+    status: ProjectStatus
 
 
 class ProjectListItem(BaseModel):

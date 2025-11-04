@@ -10,11 +10,12 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.models.api import ProjectFileEntry
+from app.models.message_db import ProjectMessageDB
 from app.models.project import (
     Project,
     ProjectEvent,
@@ -22,6 +23,11 @@ from app.models.project import (
     ProjectStatus,
 )
 from app.models.project_db import ProjectDB
+from app.models.project_message import (
+    ProjectMessage,
+    ProjectMessageRole,
+    ProjectMessageStatus,
+)
 from app.services.claude_service import ClaudeService, ClaudeServiceUnavailable
 from app.services.fallback_generator import FallbackGenerator
 from app.tools.command_adapter import CommandAdapter
@@ -80,6 +86,159 @@ class ProjectManager:
             preview_url=project_db.preview_url,
             metadata=project_db.project_metadata or {},
         )
+
+    def _message_db_to_model(self, message_db: ProjectMessageDB) -> ProjectMessage:
+        return ProjectMessage(
+            id=message_db.id,
+            project_id=message_db.project_id,
+            role=ProjectMessageRole(message_db.role),
+            status=ProjectMessageStatus(message_db.status),
+            content=message_db.content or "",
+            parent_id=message_db.parent_id,
+            metadata=message_db.message_metadata or {},
+            created_at=message_db.created_at,
+            updated_at=message_db.updated_at,
+        )
+
+    async def _next_message_sequence(self, project_id: str, db: AsyncSession) -> int:
+        result = await db.execute(
+            select(func.max(ProjectMessageDB.sequence)).where(
+                ProjectMessageDB.project_id == project_id
+            )
+        )
+        current = result.scalar()
+        return (current or 0) + 1
+
+    async def _create_message(
+        self,
+        *,
+        project_id: str,
+        role: ProjectMessageRole,
+        status: ProjectMessageStatus,
+        content: str = "",
+        parent_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        db: AsyncSession,
+    ) -> ProjectMessageDB:
+        sequence = await self._next_message_sequence(project_id, db)
+        message = ProjectMessageDB(
+            id=uuid4().hex,
+            project_id=project_id,
+            role=role.value,
+            status=status.value,
+            content=content,
+            parent_id=parent_id,
+            message_metadata=metadata or {},
+            sequence=sequence,
+        )
+        db.add(message)
+        await db.commit()
+        await db.refresh(message)
+        return message
+
+    async def _replace_message_content(
+        self,
+        message_id: str,
+        content: str,
+        db: AsyncSession,
+    ) -> ProjectMessage | None:
+        result = await db.execute(
+            select(ProjectMessageDB).where(ProjectMessageDB.id == message_id)
+        )
+        message_db = result.scalar_one_or_none()
+        if message_db is None:
+            return None
+        message_db.content = content
+        message_db.updated_at = datetime.now(UTC)
+        await db.commit()
+        await db.refresh(message_db)
+        return self._message_db_to_model(message_db)
+
+    async def _update_message_status(
+        self,
+        message_id: str,
+        status: ProjectMessageStatus,
+        db: AsyncSession,
+        *,
+        metadata: dict[str, Any] | None = None,
+    ) -> ProjectMessage | None:
+        result = await db.execute(
+            select(ProjectMessageDB).where(ProjectMessageDB.id == message_id)
+        )
+        message_db = result.scalar_one_or_none()
+        if message_db is None:
+            return None
+        message_db.status = status.value
+        if metadata is not None:
+            message_db.message_metadata = metadata
+        message_db.updated_at = datetime.now(UTC)
+        await db.commit()
+        await db.refresh(message_db)
+        return self._message_db_to_model(message_db)
+
+    async def record_user_message(
+        self,
+        project_id: str,
+        content: str,
+        db: AsyncSession,
+    ) -> ProjectMessage:
+        message_db = await self._create_message(
+            project_id=project_id,
+            role=ProjectMessageRole.USER,
+            status=ProjectMessageStatus.COMPLETE,
+            content=content,
+            db=db,
+        )
+        return self._message_db_to_model(message_db)
+
+    async def create_assistant_placeholder(
+        self,
+        project_id: str,
+        parent_id: str | None,
+        db: AsyncSession,
+        *,
+        intro: str,
+    ) -> ProjectMessage:
+        message_db = await self._create_message(
+            project_id=project_id,
+            role=ProjectMessageRole.ASSISTANT,
+            status=ProjectMessageStatus.PENDING,
+            content=intro,
+            parent_id=parent_id,
+            db=db,
+        )
+        return self._message_db_to_model(message_db)
+
+    async def list_messages(
+        self,
+        project_id: str,
+        db: AsyncSession,
+    ) -> list[ProjectMessage]:
+        result = await db.execute(
+            select(ProjectMessageDB)
+            .where(ProjectMessageDB.project_id == project_id)
+            .order_by(ProjectMessageDB.sequence.asc())
+        )
+        return [self._message_db_to_model(message) for message in result.scalars().all()]
+
+    async def _update_project_prompt(
+        self,
+        project_id: str,
+        prompt: str,
+        db: AsyncSession,
+    ) -> Project:
+        result = await db.execute(select(ProjectDB).where(ProjectDB.id == project_id))
+        project_db = result.scalar_one_or_none()
+        if project_db is None:
+            raise ProjectNotFoundError(project_id)
+        project_db.prompt = prompt
+        project_db.updated_at = datetime.now(UTC)
+        await db.commit()
+        await db.refresh(project_db)
+        project = self._project_db_to_model(project_db)
+        async with self._lock:
+            self._projects[project_id] = project
+        return project
 
     async def shutdown(self) -> None:
         pending: list[asyncio.Task[Any]] = []
@@ -292,16 +451,99 @@ class ProjectManager:
         return [self._project_db_to_model(p) for p in projects_db]
 
     async def run_generation(
-        self, project_id: str, db: AsyncSession | None = None
+        self,
+        project_id: str,
+        *,
+        prompt_override: str | None = None,
+        user_message_id: str | None = None,
+        assistant_intro: str = "",
+        db: AsyncSession | None = None,
     ) -> asyncio.Task[None]:
+        assistant_message_id: str | None = None
+        assistant_content: str = ""
+        result_metadata: dict[str, Any] | None = None
+        message_completed = False
+        message_failed = False
+
+        def merge_content(existing: str, addition: str, *, separator: str = "\n") -> str:
+            text = (addition or "").strip()
+            if not text:
+                return existing
+            if not existing:
+                return text
+            return f"{existing}{separator}{text}".strip()
+
+        async def persist_content() -> None:
+            if assistant_message_id and db:
+                await self._replace_message_content(assistant_message_id, assistant_content, db)
+
+        async def persist_status(
+            status: ProjectMessageStatus,
+            metadata: dict[str, Any] | None = None,
+        ) -> None:
+            nonlocal result_metadata, message_completed, message_failed
+            if status == ProjectMessageStatus.COMPLETE:
+                message_completed = True
+                if metadata is not None:
+                    result_metadata = metadata
+            elif status == ProjectMessageStatus.ERROR:
+                message_failed = True
+            payload = metadata if metadata is not None else result_metadata
+            if assistant_message_id and db:
+                await self._update_message_status(
+                    assistant_message_id,
+                    status,
+                    db,
+                    metadata=payload,
+                )
+
         async def emit_log(message: str) -> None:
             await self.append_log(project_id, message)
 
         async def emit_claude_message(event_data: dict[str, Any]) -> None:
-            """Emit structured Claude messages as ProjectEvents."""
+            nonlocal assistant_content, result_metadata
             event_type = event_data.get("type")
             payload = event_data.get("payload", {})
-            
+
+            if event_type == "assistant_message":
+                text = payload.get("text")
+                if isinstance(text, str) and text.strip():
+                    assistant_content = merge_content(assistant_content, text, separator="\n")
+                    await persist_content()
+            elif event_type == "tool_use":
+                tool_name = payload.get("name") or "tool"
+                tool_input = payload.get("input")
+                details = ""
+                if tool_input is not None:
+                    try:
+                        serialized = json.dumps(tool_input, indent=2)
+                    except TypeError:
+                        serialized = str(tool_input)
+                    details = f":\n```json\n{serialized}\n```"
+                tool_message = f"Tool use {tool_name}{details}"
+                assistant_content = merge_content(assistant_content, tool_message, separator="\n\n")
+                await persist_content()
+            elif event_type == "result_message":
+                cost = payload.get("total_cost_usd")
+                usage = payload.get("usage") or {}
+                summary_parts: list[str] = []
+                if isinstance(cost, (int, float)):
+                    summary_parts.append(f"cost ${cost:.4f}")
+                input_tokens = usage.get("input_tokens")
+                output_tokens = usage.get("output_tokens")
+                if isinstance(input_tokens, int) and isinstance(output_tokens, int):
+                    summary_parts.append(f"{input_tokens} input + {output_tokens} output tokens")
+                elif isinstance(input_tokens, int):
+                    summary_parts.append(f"{input_tokens} input tokens")
+                elif isinstance(output_tokens, int):
+                    summary_parts.append(f"{output_tokens} output tokens")
+                summary = "Complete"
+                if summary_parts:
+                    summary = f"Complete ({', '.join(summary_parts)})"
+                assistant_content = merge_content(assistant_content, summary, separator="\n\n")
+                await persist_content()
+                await persist_status(ProjectMessageStatus.COMPLETE, payload)
+
             if event_type == "assistant_message":
                 await self._publish_event(
                     ProjectEvent(
@@ -331,11 +573,33 @@ class ProjectManager:
                 )
 
         async def worker() -> None:
+            nonlocal assistant_message_id, assistant_content
+
             try:
                 project = await self.get_project(project_id)
             except ProjectNotFoundError:
                 await emit_log("Project not found; aborting generation.")
+                await persist_status(ProjectMessageStatus.ERROR, {"error": "project_not_found"})
                 return
+
+            intro_text = (assistant_intro or "").strip()
+            if db is not None:
+                placeholder = await self.create_assistant_placeholder(
+                    project_id,
+                    parent_id=user_message_id,
+                    db=db,
+                    intro=intro_text,
+                )
+                assistant_message_id = placeholder.id
+                assistant_content = placeholder.content
+            else:
+                assistant_content = intro_text
+
+            effective_prompt = prompt_override or project.prompt
+            if prompt_override and db is not None:
+                project = await self._update_project_prompt(project_id, prompt_override, db)
+            else:
+                project = project.model_copy(update={"prompt": effective_prompt})
 
             await self.update_status(project_id, ProjectStatus.RUNNING, db)
             await emit_log("Starting project generation...")
@@ -344,34 +608,62 @@ class ProjectManager:
             preview_path: str | None = None
 
             async def run_fallback(reason: str) -> str | None:
+                nonlocal assistant_content
+                reason_text = reason.strip()
+                if reason_text:
+                    assistant_content = merge_content(
+                        assistant_content,
+                        reason_text,
+                        separator="\n\n",
+                    )
+                    await persist_content()
                 await emit_log(reason)
                 await emit_log("Falling back to local scaffold generator...")
+                assistant_content = merge_content(
+                    assistant_content,
+                    "Using local scaffold generator",
+                    separator="\n\n",
+                )
+                await persist_content()
                 try:
                     outcome = await self._fallback_generator.generate(
                         generation_root,
-                        project.prompt,
+                        effective_prompt,
                     )
                 except Exception as fallback_exc:  # pragma: no cover - defensive fallback
+                    error_detail = str(fallback_exc)
+                    assistant_content = merge_content(
+                        assistant_content,
+                        f"Fallback generation failed: {error_detail}",
+                        separator="\n\n",
+                    )
+                    await persist_content()
+                    await persist_status(ProjectMessageStatus.ERROR, {"error": error_detail})
                     await self._publish_event(
                         ProjectEvent(
                             project_id=project_id,
                             type=ProjectEventType.ERROR,
                             message="Fallback generation failed",
-                            payload={"detail": str(fallback_exc)},
+                            payload={"detail": error_detail},
                         )
                     )
-                    await emit_log(f"Fallback generator failed: {fallback_exc}")
+                    await emit_log(f"Fallback generator failed: {error_detail}")
                     await self.update_status(project_id, ProjectStatus.FAILED, db)
                     return None
 
-                await emit_log("Fallback generation completed.")
+                assistant_content = merge_content(
+                    assistant_content,
+                    "Fallback generation completed.",
+                    separator="\n\n",
+                )
+                await persist_content()
                 return outcome.preview_path
 
             try:
                 if self._claude_service and self._claude_service.is_available:
                     await emit_log("Invoking Claude service...")
                     outcome = await self._claude_service.generate(
-                        prompt=project.prompt,
+                        prompt=effective_prompt,
                         project_root=generation_root,
                         template=project.template,
                         emit=emit_claude_message,
@@ -388,6 +680,15 @@ class ProjectManager:
                 preview_path = await run_fallback(f"Claude generation error: {exc}")
 
             if preview_path is None:
+                if not message_failed:
+                    assistant_content = merge_content(
+                        assistant_content,
+                        "Generation failed.",
+                        separator="\n\n",
+                    )
+                    await persist_content()
+                    await persist_status(ProjectMessageStatus.ERROR, {"error": "generation_failed"})
+                    await self.update_status(project_id, ProjectStatus.FAILED, db)
                 return
 
             try:
@@ -396,6 +697,13 @@ class ProjectManager:
                     emit_log,
                 )
             except Exception as exc:  # pragma: no cover - defensive guard
+                assistant_content = merge_content(
+                    assistant_content,
+                    f"Post-generation step failed: {exc}",
+                    separator="\n\n",
+                )
+                await persist_content()
+                await persist_status(ProjectMessageStatus.ERROR, {"error": str(exc)})
                 await emit_log(f"Post-generation step failed: {exc}")
                 await self.update_status(project_id, ProjectStatus.FAILED, db)
                 return
@@ -408,6 +716,16 @@ class ProjectManager:
                 await self.set_preview_url(project_id, preview_url, db)
 
             await self.update_status(project_id, ProjectStatus.READY, db)
+
+            if not message_completed and not message_failed:
+                assistant_content = merge_content(
+                    assistant_content,
+                    "Generation complete.",
+                    separator="\n\n",
+                )
+                await persist_content()
+                await persist_status(ProjectMessageStatus.COMPLETE)
+
             await emit_log("Project ready.")
 
         task: asyncio.Task[None] = asyncio.create_task(

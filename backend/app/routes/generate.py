@@ -24,6 +24,15 @@ async def start_generation(
         template=payload.template,
         db=db,
     )
-    await manager.run_generation(project.id, db=db)
+    user_message = await manager.record_user_message(
+        project.id,
+        payload.prompt,
+        db,
+    )
+    await manager.run_generation(
+        project.id,
+        user_message_id=user_message.id,
+        db=db,
+    )
 
     return ProjectGenerateResponse(project_id=project.id, status=project.status)
