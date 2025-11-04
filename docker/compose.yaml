@@ -12,6 +12,8 @@ services:
     ports:
       - "8000:8000"
     restart: always
+    networks:
+      - traefik
 
   frontend:
     build:
@@ -26,6 +28,12 @@ services:
     ports:
       - "3000:3000"
     restart: always
+    networks:
+      - traefik
 
 volumes:
   projects-data:
+
+networks:
+  traefik:
+    external: true
