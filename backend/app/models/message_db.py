@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import JSON, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 
 from app.database import Base
@@ -36,4 +36,3 @@ class ProjectMessageDB(Base):
 
     project = relationship("ProjectDB", back_populates="messages", foreign_keys=[project_id])
     parent = relationship("ProjectMessageDB", remote_side=[id], backref="children")
-

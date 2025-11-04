@@ -39,4 +39,3 @@ __all__ = [
     "resolve_project_path",
     "ensure_within",
 ]
-

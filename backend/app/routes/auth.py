@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from pydantic import BaseModel
 
-from app.dependencies import AsyncDBSession, CurrentUser
+from app.dependencies import CurrentUser
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -24,4 +24,3 @@ async def get_current_user_info(current_user: CurrentUser) -> UserResponse:
         name=current_user.name,
         image=current_user.image,
     )
-

@@ -148,7 +148,8 @@ class ClaudeService:
         if template:
             return (
                 f"{base_intro}\n"
-                f"Modify the generated {template} application according to the user's instructions, using Vite + React conventions.\n"
+                f"Modify the generated {template} application according to the user's "
+                f"instructions, using Vite + React conventions.\n"
                 f"User prompt: {prompt}"
             )
         return f"{base_intro}\nUser prompt: {prompt}"

@@ -23,7 +23,7 @@ class DirectoryListingEntry:
 
 class FileAdapter:
     """Async helper for sandboxed filesystem interactions.
-    
+
     Note: This adapter is used for:
     - Listing project files for the UI (via ProjectManager.list_files)
     - Fallback generator operations
@@ -114,9 +114,7 @@ class FileAdapter:
 
         return await asyncio.to_thread(_collect)
 
-    async def to_project_entries(
-        self, relative_path: str | None = None
-    ) -> list[ProjectFileEntry]:
+    async def to_project_entries(self, relative_path: str | None = None) -> list[ProjectFileEntry]:
         listings = await self.list_directory(relative_path)
         return [
             ProjectFileEntry(

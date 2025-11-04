@@ -45,7 +45,7 @@ async def list_user_projects(
         limit=limit,
         offset=offset,
     )
-    
+
     project_items = [
         ProjectListItem(
             id=project.id,
@@ -57,7 +57,7 @@ async def list_user_projects(
         )
         for project in projects
     ]
-    
+
     return ProjectListResponse(projects=project_items)
 
 
@@ -134,7 +134,7 @@ HTML_REWRITE_SUFFIXES = {
 
 def _rewrite_preview_html(document: str, token: str | None = None) -> str:
     """Rewrite absolute asset references to relative ones for iframe previews.
-    
+
     If a token is provided, it will be appended to rewritten asset URLs to enable
     authenticated access to assets loaded by the browser.
     """
@@ -150,19 +150,19 @@ def _rewrite_preview_html(document: str, token: str | None = None) -> str:
         suffix = Path(core).suffix.lower()
         if suffix not in HTML_REWRITE_SUFFIXES:
             return match.group(0)
-        
+
         # Rewrite to relative path
         rewritten_path = f"./{stripped}"
-        
+
         # Append token as query parameter if provided
         if token:
             separator = "&" if "?" in rewritten_path else "?"
             rewritten_path = f"{rewritten_path}{separator}token={token}"
-        
+
         return f"{match.group('prefix')}{rewritten_path}"
 
     # Fast exit when no absolute references are present.
-    if "\"/" not in document and "'/" not in document:
+    if '"/' not in document and "'/" not in document:
         return document
 
     return _HTML_ABSOLUTE_REF_PATTERN.sub(_replace, document)
@@ -314,15 +314,42 @@ async def get_project_file_content(
     # Define binary file extensions that cannot be read as text
     binary_extensions = {
         # Images (SVG is text-based, so we try to read it and catch errors)
-        ".ico", ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".tiff", ".tif",
+        ".ico",
+        ".png",
+        ".jpg",
+        ".jpeg",
+        ".gif",
+        ".webp",
+        ".bmp",
+        ".tiff",
+        ".tif",
         # Fonts
-        ".woff", ".woff2", ".ttf", ".otf", ".eot",
+        ".woff",
+        ".woff2",
+        ".ttf",
+        ".otf",
+        ".eot",
         # Archives
-        ".zip", ".tar", ".gz", ".bz2", ".xz", ".7z", ".rar",
+        ".zip",
+        ".tar",
+        ".gz",
+        ".bz2",
+        ".xz",
+        ".7z",
+        ".rar",
         # Executables
-        ".exe", ".bin", ".dll", ".so", ".dylib",
+        ".exe",
+        ".bin",
+        ".dll",
+        ".so",
+        ".dylib",
         # Other binary formats
-        ".pdf", ".mp4", ".mp3", ".avi", ".mov", ".wav",
+        ".pdf",
+        ".mp4",
+        ".mp3",
+        ".avi",
+        ".mov",
+        ".wav",
     }
 
     # Check if file has a binary extension
@@ -340,8 +367,7 @@ async def get_project_file_content(
     except UnicodeDecodeError:
         # File appears to be binary despite not having a recognized extension
         return PlainTextResponse(
-            "[Binary file]\n"
-            "This file cannot be displayed as text in the code viewer.",
+            "[Binary file]\nThis file cannot be displayed as text in the code viewer.",
             status_code=status.HTTP_200_OK,
         )
 

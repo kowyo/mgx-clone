@@ -38,7 +38,7 @@ class AuthService:
         # Run the synchronous JWT verification in a thread pool to avoid blocking
         # the async event loop during the HTTP request to fetch JWKS
         loop = asyncio.get_event_loop()
-        
+
         def _verify_sync():
             try:
                 # Get the signing key from JWKS using PyJWKClient
@@ -46,10 +46,10 @@ class AuthService:
 
                 # Decode token without verification to fail fast on malformed tokens
                 jwt.decode(token, options={"verify_signature": False})
-                
+
                 # Better-auth uses the baseURL as issuer and audience
                 issuer = self.better_auth_url
-                
+
                 # Verify and decode the token
                 payload = jwt.decode(
                     token,
@@ -72,12 +72,13 @@ class AuthService:
                 ) from e
             except Exception as e:
                 import traceback
+
                 traceback.print_exc()
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail=f"Token verification failed: {str(e)}",
                 ) from e
-        
+
         # Run the synchronous function in a thread pool
         return await loop.run_in_executor(None, _verify_sync)
 
@@ -133,4 +134,3 @@ auth_service = AuthService(
     better_auth_url=settings.better_auth_url,
     better_auth_internal_url=settings.better_auth_internal_url,
 )
-

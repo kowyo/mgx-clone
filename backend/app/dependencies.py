@@ -27,11 +27,11 @@ def _extract_token_from_request(
                 return token
         except ValueError:
             pass
-    
+
     # Try query parameter (for preview assets)
     if token_param:
         return token_param
-    
+
     # Try cookie (better-auth might set session token in cookie)
     # Better-auth typically uses cookie name patterns like:
     # - "better-auth.session_token"
@@ -46,7 +46,7 @@ def _extract_token_from_request(
                 name, value = cookie_part.split("=", 1)
                 name = name.strip()
                 cookies_dict[name] = value
-        
+
         # Try common better-auth cookie name patterns (in order of likelihood)
         cookie_patterns = [
             "better-auth.session_token",
@@ -54,18 +54,21 @@ def _extract_token_from_request(
             "session_token",
             "sessionToken",
         ]
-        
+
         # Also check for cookies that contain both "session" and "token" in the name
         for name, value in cookies_dict.items():
             name_lower = name.lower()
-            if any(pattern in name_lower for pattern in ["better-auth", "session"]) and "token" in name_lower:
+            has_session_pattern = any(
+                pattern in name_lower for pattern in ["better-auth", "session"]
+            )
+            if has_session_pattern and "token" in name_lower:
                 return value
-        
+
         # Fallback: try exact matches
         for pattern in cookie_patterns:
             if pattern in cookies_dict:
                 return cookies_dict[pattern]
-    
+
     return None
 
 
@@ -77,17 +80,17 @@ async def get_current_user(
 ) -> User:
     """Dependency to get current authenticated user from bearer token,
     cookie, or query parameter."""
-    
+
     # Get all cookies from request headers
     cookies_str = request.headers.get("cookie", "")
-    
+
     # Try to extract token from various sources
     token_value = _extract_token_from_request(
         authorization=authorization,
         cookie=cookies_str,
         token_param=token,
     )
-    
+
     if not token_value:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -99,10 +102,10 @@ async def get_current_user(
         )
 
     user = await auth_service.get_user_from_token(token_value, db)
-    
+
     # Store the token in request state so it can be accessed by endpoints
     request.state.auth_token = token_value
-    
+
     return user
 
 
@@ -117,17 +120,17 @@ async def get_current_user_optional(
 ) -> User | None:
     """Optional dependency to get current authenticated user from bearer token,
     cookie, or query parameter. Returns None if no token is found instead of raising an error."""
-    
+
     # Get all cookies from request headers
     cookies_str = request.headers.get("cookie", "")
-    
+
     # Try to extract token from various sources
     token_value = _extract_token_from_request(
         authorization=authorization,
         cookie=cookies_str,
         token_param=token,
     )
-    
+
     if not token_value:
         # No token found, return None (don't raise error)
         return None

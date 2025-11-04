@@ -13,15 +13,15 @@ from claude_agent_sdk import ClaudeAgentOptions
 
 def build_claude_options(project_root: Path, allowed_commands: list[str]) -> ClaudeAgentOptions:
     """Build Claude Agent options with built-in tools.
-    
+
     Note: The `allowed_commands` parameter is kept for backward compatibility
     but is no longer used since we rely on Claude's built-in Bash tool with
     permission_mode="acceptEdits".
-    
+
     Args:
         project_root: The project directory where Claude will operate.
         allowed_commands: Unused (kept for compatibility).
-        
+
     Returns:
         Configured ClaudeAgentOptions with built-in Read, Write, and Bash tools.
     """

@@ -22,7 +22,7 @@ class CommandResult:
 
 class CommandAdapter:
     """Async helper that runs sandboxed commands with a whitelist.
-    
+
     Note: This adapter is used for post-generation steps (e.g., pnpm install,
     pnpm run build) and is NOT part of the Claude Agent SDK tool system.
     Claude uses its built-in Bash tool for code generation operations.

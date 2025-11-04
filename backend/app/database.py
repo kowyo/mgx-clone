@@ -3,8 +3,6 @@ from __future__ import annotations
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
 
-from app.config import settings
-
 # SQLite database URL
 DATABASE_URL = "sqlite+aiosqlite:///./claude_app.db"
 
@@ -41,4 +39,3 @@ async def init_db() -> None:
     """Initialize database tables."""
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-

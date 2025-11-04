@@ -142,9 +142,7 @@ class ProjectManager:
         content: str,
         db: AsyncSession,
     ) -> ProjectMessage | None:
-        result = await db.execute(
-            select(ProjectMessageDB).where(ProjectMessageDB.id == message_id)
-        )
+        result = await db.execute(select(ProjectMessageDB).where(ProjectMessageDB.id == message_id))
         message_db = result.scalar_one_or_none()
         if message_db is None:
             return None
@@ -162,9 +160,7 @@ class ProjectManager:
         *,
         metadata: dict[str, Any] | None = None,
     ) -> ProjectMessage | None:
-        result = await db.execute(
-            select(ProjectMessageDB).where(ProjectMessageDB.id == message_id)
-        )
+        result = await db.execute(select(ProjectMessageDB).where(ProjectMessageDB.id == message_id))
         message_db = result.scalar_one_or_none()
         if message_db is None:
             return None
@@ -813,8 +809,7 @@ class ProjectManager:
             package_data = json.loads(package_text)
         except Exception as exc:  # pragma: no cover - defensive guard
             await emit(
-                "Warning: unable to parse package.json "
-                f"({exc}); proceeding with pnpm install only."
+                f"Warning: unable to parse package.json ({exc}); proceeding with pnpm install only."
             )
 
         adapter = CommandAdapter(package_root, settings.allowed_commands)
@@ -882,8 +877,7 @@ class ProjectManager:
                     relative_candidate = prefix / candidate
                 normalized = relative_candidate.as_posix()
                 await emit(
-                    "Detected build artifact at "
-                    f"{normalized}; using as preview entry point."
+                    f"Detected build artifact at {normalized}; using as preview entry point."
                 )
                 return normalized
 
