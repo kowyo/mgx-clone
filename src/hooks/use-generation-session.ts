@@ -201,18 +201,8 @@ export function useGenerationSession(): UseGenerationSessionReturn {
         }))
       },
       onResultMessage: (payload) => {
-        const cost = payload.total_cost_usd
-        const usage = payload.usage
-        const costStr = cost !== undefined ? `$${cost.toFixed(4)}` : ""
-        const tokensStr = usage 
-          ? `${usage.input_tokens || 0} input + ${usage.output_tokens || 0} output tokens`
-          : ""
-        const resultParts = [costStr, tokensStr].filter(Boolean)
-        const resultMessage = resultParts.length > 0 
-          ? `✅ Complete (${resultParts.join(", ")})`
-          : "✅ Complete"
         updateActiveAssistantMessage((msg) => ({
-          content: msg.content ? `${msg.content}\n\n${resultMessage}`.trim() : resultMessage,
+          content: msg.content,
           status: "complete",
         }))
       },
