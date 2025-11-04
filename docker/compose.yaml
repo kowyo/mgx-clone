@@ -5,8 +5,6 @@ services:
       dockerfile: docker/Dockerfile.backend
     env_file:
       - ../backend/.env
-    environment:
-      CLAUDE_APP_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
     volumes:
       - projects-data:/data/projects
     ports:
