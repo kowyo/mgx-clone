@@ -138,16 +138,18 @@ class ClaudeService:
 
     def _compose_prompt(self, prompt: str, template: str | None) -> str:
         base_intro = (
-            "To create a new project, always use the following command to generate the initial template: "
-            "'pnpm create next-app@latest <project-name> --yes'. "
-            "After generating the template project, only modify the necessary code to fulfill the user's instructions. "
-            'After making code changes, modify `next.config.js` to set `output: "export"` for static export, '
-            "And then run `pnpm build` to generate static files in the `out` directory. Then your task is complete if no error occurs."
+            "You are a software engineer. "
+            "Always scaffold the template non-interactively with: "
+            "'pnpm dlx degit vitejs/vite/packages/create-vite/template-react <project-name>'. "
+            "After scaffolding, run `pnpm install` to install the dependencies. "
+            "Then run `pnpm run build` to build the project. "
+            "Only modify the necessary code to fulfill the user's instructions. "
+            "Run `pnpm run build` to build the project. Your task is complete if no error occurs. "
         )
         if template:
             return (
                 f"{base_intro}\n"
-                f"Modify the generated {template} application according to the user's instructions.\n"
+                f"Modify the generated {template} application according to the user's instructions, using Vite + React conventions.\n"
                 f"User prompt: {prompt}"
             )
         return f"{base_intro}\nUser prompt: {prompt}"
