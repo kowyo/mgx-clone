@@ -15,34 +15,37 @@ export const { signIn, signOut, signUp, useSession } = authClient;
  * Type for the session object returned by useSession hook.
  * This matches the structure returned by better-auth's useSession.
  */
-export type SessionData = {
-  session?: {
-    id: string;
-    userId: string;
-    expiresAt: Date;
-    token?: string;
-  };
-  user?: {
-    id: string;
-    email: string;
-    name?: string | null;
-    image?: string | null;
-  };
-} | null | undefined;
+export type SessionData =
+  | {
+      session?: {
+        id: string;
+        userId: string;
+        expiresAt: Date;
+        token?: string;
+      };
+      user?: {
+        id: string;
+        email: string;
+        name?: string | null;
+        image?: string | null;
+      };
+    }
+  | null
+  | undefined;
 
 /**
  * Retrieves a JWT token for authenticated API requests.
- * 
+ *
  * This is the recommended way to get JWT tokens with better-auth.
  * The token is fetched via the /api/auth/token endpoint, which
  * requires an active session.
- * 
+ *
  * @param session - Optional session object. If not provided, checks for active session internally.
  * @returns Promise that resolves to the JWT token string, or undefined if:
  *   - No session is active
  *   - Token retrieval fails
  *   - Token endpoint returns an error
- * 
+ *
  * @example
  * ```ts
  * const { data: session } = useSession();
@@ -62,7 +65,9 @@ let cooldownUntilMs = 0;
 const TOKEN_TTL_MS = 30_000; // 30s
 const COOL_DOWN_MS_DEFAULT = 30_000; // 30s after 429
 
-export async function getJWTToken(session?: SessionData): Promise<string | undefined> {
+export async function getJWTToken(
+  session?: SessionData,
+): Promise<string | undefined> {
   if (!session?.session) return undefined;
 
   const now = Date.now();
@@ -116,12 +121,10 @@ export async function getJWTToken(session?: SessionData): Promise<string | undef
 /**
  * @deprecated Use getJWTToken() instead. This function is kept for backward compatibility
  * but may not reliably extract tokens from the session object structure.
- * 
+ *
  * The session object from better-auth does not reliably include a token property,
  * and JWT tokens should be fetched via the token() API method instead.
  */
-export function getSessionToken(
-  session: SessionData
-): string | undefined {
+export function getSessionToken(session: SessionData): string | undefined {
   return session?.session?.token;
 }

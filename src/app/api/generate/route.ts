@@ -1,12 +1,12 @@
-import { NextResponse } from "next/server"
+import { NextResponse } from "next/server";
 
 // Mock API endpoint that simulates Claude Agent backend
 export async function POST(request: Request) {
   try {
-    const { prompt } = await request.json()
+    const { prompt } = await request.json();
 
     // Simulate processing delay
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // Generate mock response based on prompt
     const mockFiles = [
@@ -139,17 +139,20 @@ button:hover {
   }
 }`,
       },
-    ]
+    ];
 
     // Mock preview URL (in production, this would be a real preview server)
-    const previewUrl = `https://stackblitz.com/edit/react-${Date.now()}?embed=1&file=src/App.tsx`
+    const previewUrl = `https://stackblitz.com/edit/react-${Date.now()}?embed=1&file=src/App.tsx`;
 
     return NextResponse.json({
       files: mockFiles,
       preview_url: previewUrl,
       project_id: `project-${Date.now()}`,
-    })
+    });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to generate app" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Failed to generate app" },
+      { status: 500 },
+    );
   }
 }

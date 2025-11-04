@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import { Card } from "@/components/ui/card"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { CheckCircle2, XCircle, Info, Terminal } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Card } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { CheckCircle2, XCircle, Info, Terminal } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface StatusPanelProps {
-  logs: Array<{ type: "info" | "error" | "success"; message: string }>
+  logs: Array<{ type: "info" | "error" | "success"; message: string }>;
 }
 
 export function StatusPanel({ logs }: StatusPanelProps) {
@@ -29,15 +29,25 @@ export function StatusPanel({ logs }: StatusPanelProps) {
                   key={index}
                   className={cn(
                     "flex items-start gap-3 rounded-md p-3 text-sm",
-                    log.type === "error" && "bg-destructive/10 text-destructive",
-                    log.type === "success" && "bg-green-500/10 text-green-700 dark:text-green-400",
+                    log.type === "error" &&
+                      "bg-destructive/10 text-destructive",
+                    log.type === "success" &&
+                      "bg-green-500/10 text-green-700 dark:text-green-400",
                     log.type === "info" && "bg-muted text-foreground",
                   )}
                 >
-                  {log.type === "error" && <XCircle className="mt-0.5 h-4 w-4 shrink-0" />}
-                  {log.type === "success" && <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />}
-                  {log.type === "info" && <Info className="mt-0.5 h-4 w-4 shrink-0" />}
-                  <span className="font-mono text-xs leading-relaxed">{log.message}</span>
+                  {log.type === "error" && (
+                    <XCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  )}
+                  {log.type === "success" && (
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                  )}
+                  {log.type === "info" && (
+                    <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                  )}
+                  <span className="font-mono text-xs leading-relaxed">
+                    {log.message}
+                  </span>
                 </div>
               ))}
             </div>
@@ -45,5 +55,5 @@ export function StatusPanel({ logs }: StatusPanelProps) {
         </div>
       </ScrollArea>
     </Card>
-  )
+  );
 }

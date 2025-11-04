@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
-import { RefreshCw, ExternalLink } from "lucide-react"
+import { Button } from "@/components/ui/button";
+import { RefreshCw, ExternalLink } from "lucide-react";
 
 interface PreviewWindowProps {
-  url: string
-  onRefresh: () => void
+  url: string;
+  onRefresh: () => void;
 }
 
 export function PreviewWindow({ url, onRefresh }: PreviewWindowProps) {
@@ -18,7 +18,7 @@ export function PreviewWindow({ url, onRefresh }: PreviewWindowProps) {
           <p className="mt-1 text-xs">Generate an app to see the preview</p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -26,7 +26,10 @@ export function PreviewWindow({ url, onRefresh }: PreviewWindowProps) {
       {/* Preview Toolbar */}
       <div className="flex items-center justify-between border-b border-border bg-muted/30 px-4 shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="ml-3 font-mono text-xs text-muted-foreground truncate" title={url}>
+          <span
+            className="ml-3 font-mono text-xs text-muted-foreground truncate"
+            title={url}
+          >
             {url}
           </span>
         </div>
@@ -52,12 +55,12 @@ export function PreviewWindow({ url, onRefresh }: PreviewWindowProps) {
         <iframe
           src={url}
           className="h-full w-full border-0 min-w-0 max-w-full absolute inset-0"
-          style={{ width: '100%', height: '100%', maxWidth: '100%' }}
+          style={{ width: "100%", height: "100%", maxWidth: "100%" }}
           title="App Preview"
           sandbox="allow-scripts allow-same-origin allow-forms"
           referrerPolicy="no-referrer-when-downgrade"
         />
       </div>
     </div>
-  )
+  );
 }

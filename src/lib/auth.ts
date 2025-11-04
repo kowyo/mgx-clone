@@ -1,6 +1,6 @@
-import { betterAuth } from "better-auth"
-import { jwt } from "better-auth/plugins"
-import { db } from "./db"
+import { betterAuth } from "better-auth";
+import { jwt } from "better-auth/plugins";
+import { db } from "./db";
 
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000",
@@ -15,9 +15,7 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     },
   },
-  secret: process.env.BETTER_AUTH_SECRET || "your-secret-key-change-in-production",
-  plugins: [
-    jwt(),
-  ],
-})
-
+  secret:
+    process.env.BETTER_AUTH_SECRET || "your-secret-key-change-in-production",
+  plugins: [jwt()],
+});

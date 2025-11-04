@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { FileCode} from "lucide-react"
-import { FileTree } from "@/components/file-tree"
-import { CodeBlockContent } from "@/components/ui/shadcn-io/code-block"
-import { useState } from "react"
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { FileCode } from "lucide-react";
+import { FileTree } from "@/components/file-tree";
+import { CodeBlockContent } from "@/components/ui/shadcn-io/code-block";
+import { useState } from "react";
 
 interface CodeViewerProps {
-  files: Array<{ path: string; content?: string }>
-  selectedFile: string | null
-  onSelect: (path: string) => void
-  loading?: boolean
+  files: Array<{ path: string; content?: string }>;
+  selectedFile: string | null;
+  onSelect: (path: string) => void;
+  loading?: boolean;
 }
 
 // Helper function to detect language from file extension
 function getLanguageFromPath(path: string): string {
-  const ext = path.split(".").pop()?.toLowerCase()
+  const ext = path.split(".").pop()?.toLowerCase();
   const languageMap: Record<string, string> = {
     ts: "typescript",
     tsx: "tsx",
@@ -43,23 +43,34 @@ function getLanguageFromPath(path: string): string {
     dart: "dart",
     vue: "vue",
     svelte: "svelte",
-  }
-  return languageMap[ext || ""] || "text"
+  };
+  return languageMap[ext || ""] || "text";
 }
 
-export function CodeViewer({ files, selectedFile, onSelect, loading = false }: CodeViewerProps) {
-  const currentFile = files.find((f) => f.path === selectedFile)
+export function CodeViewer({
+  files,
+  selectedFile,
+  onSelect,
+  loading = false,
+}: CodeViewerProps) {
+  const currentFile = files.find((f) => f.path === selectedFile);
 
   if (files.length === 0) {
     return (
       <div className="flex h-full items-center justify-center text-muted-foreground min-w-0 w-full">
         <div className="text-center">
           <FileCode className="mx-auto mb-3 h-12 w-12 opacity-50" />
-          <p className="text-sm">{loading ? "Awaiting generated files..." : "No code generated yet"}</p>
-          {!loading && <p className="mt-1 text-xs">Enter a prompt and click Generate to start</p>}
+          <p className="text-sm">
+            {loading ? "Awaiting generated files..." : "No code generated yet"}
+          </p>
+          {!loading && (
+            <p className="mt-1 text-xs">
+              Enter a prompt and click Generate to start
+            </p>
+          )}
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -68,7 +79,9 @@ export function CodeViewer({ files, selectedFile, onSelect, loading = false }: C
       <div className="w-64 border-r border-border bg-muted/30 shrink-0">
         <ScrollArea className="h-full">
           <div className="p-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Files</p>
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Files
+            </p>
             <FileTree
               files={files}
               selectedFile={selectedFile}
@@ -102,5 +115,5 @@ export function CodeViewer({ files, selectedFile, onSelect, loading = false }: C
         </ScrollArea>
       </div>
     </div>
-  )
+  );
 }

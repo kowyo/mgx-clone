@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { FormEvent, ChangeEvent, useMemo, useState } from "react"
-import { ConversationMessage, LogEntry } from "@/hooks/use-generation-session"
-import { cn } from "@/lib/utils"
-import { Card } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { FormEvent, ChangeEvent, useMemo, useState } from "react";
+import { ConversationMessage, LogEntry } from "@/hooks/use-generation-session";
+import { cn } from "@/lib/utils";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -12,37 +12,33 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import {
   PromptInput,
   PromptInputTextarea,
   PromptInputToolbar,
   PromptInputSubmit,
-} from "@/components/ui/shadcn-io/ai/prompt-input"
-import { Message, MessageContent } from "@/components/ui/shadcn-io/ai/message"
+} from "@/components/ui/shadcn-io/ai/prompt-input";
+import { Message, MessageContent } from "@/components/ui/shadcn-io/ai/message";
 import {
   Conversation,
   ConversationContent,
   ConversationEmptyState,
   ConversationScrollButton,
-} from "@/components/ai-elements/conversation"
-import {
-  Loader2,
-  Sparkles,
-  XCircle,
-} from "lucide-react"
-import { useSession, signIn } from "@/lib/auth-client"
-import { GoogleLogo } from "@/components/auth-button"
-import { Streamdown } from "streamdown"
+} from "@/components/ai-elements/conversation";
+import { Loader2, Sparkles, XCircle } from "lucide-react";
+import { useSession, signIn } from "@/lib/auth-client";
+import { GoogleLogo } from "@/components/auth-button";
+import { Streamdown } from "streamdown";
 
 interface ConversationPanelProps {
-  messages: ConversationMessage[]
-  logs: LogEntry[]
-  prompt: string
-  onPromptChange: (value: string) => void
-  onSubmit: () => void | Promise<void>
-  isGenerating: boolean
+  messages: ConversationMessage[];
+  logs: LogEntry[];
+  prompt: string;
+  onPromptChange: (value: string) => void;
+  onSubmit: () => void | Promise<void>;
+  isGenerating: boolean;
 }
 
 export function ConversationPanel({
@@ -53,32 +49,32 @@ export function ConversationPanel({
   onSubmit,
   isGenerating,
 }: ConversationPanelProps) {
-  const { data: session } = useSession()
-  const [showLoginDialog, setShowLoginDialog] = useState(false)
+  const { data: session } = useSession();
+  const [showLoginDialog, setShowLoginDialog] = useState(false);
   const orderedMessages = useMemo(
     () => [...messages].sort((a, b) => a.createdAt - b.createdAt),
     [messages],
-  )
-  const disableSend = isGenerating || !prompt.trim()
+  );
+  const disableSend = isGenerating || !prompt.trim();
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    
+    event.preventDefault();
+
     // Check if user is logged in
     if (!session?.user) {
-      setShowLoginDialog(true)
-      return
+      setShowLoginDialog(true);
+      return;
     }
-    
-    void onSubmit()
-  }
+
+    void onSubmit();
+  };
 
   const handleLogin = () => {
     signIn.social({
       provider: "google",
-    })
-    setShowLoginDialog(false)
-  }
+    });
+    setShowLoginDialog(false);
+  };
 
   return (
     <Card className="flex h-full min-h-[520px] flex-col overflow-hidden">
@@ -93,7 +89,7 @@ export function ConversationPanel({
           ) : (
             <div className="space-y-2">
               {orderedMessages.map((message) => {
-                const isUser = message.role === "user"
+                const isUser = message.role === "user";
 
                 return (
                   <Message from={message.role} key={message.id}>
@@ -105,12 +101,16 @@ export function ConversationPanel({
                     >
                       {isUser ? (
                         <MessageContent variant="flat">
-                          <p className="whitespace-pre-wrap leading-relaxed">{message.content}</p>
+                          <p className="whitespace-pre-wrap leading-relaxed">
+                            {message.content}
+                          </p>
                         </MessageContent>
                       ) : (
                         <MessageContent variant="flat">
                           <div className="prose prose-sm dark:prose-invert max-w-none">
-                            <Streamdown isAnimating={message.status === "pending"}>
+                            <Streamdown
+                              isAnimating={message.status === "pending"}
+                            >
                               {message.content}
                             </Streamdown>
                           </div>
@@ -118,14 +118,18 @@ export function ConversationPanel({
                       )}
                       {!isUser && message.status !== "complete" && (
                         <Badge variant="outline" className="gap-2 text-[11px]">
-                          {message.status === "pending" && <Loader2 className="h-3 w-3 animate-spin" />}
-                          {message.status === "error" && <XCircle className="h-3 w-3" />}
+                          {message.status === "pending" && (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          )}
+                          {message.status === "error" && (
+                            <XCircle className="h-3 w-3" />
+                          )}
                           <span className="capitalize">{message.status}</span>
                         </Badge>
                       )}
                     </div>
                   </Message>
-                )
+                );
               })}
             </div>
           )}
@@ -137,7 +141,9 @@ export function ConversationPanel({
         <PromptInput onSubmit={handleSubmit}>
           <PromptInputTextarea
             value={prompt}
-            onChange={(event: ChangeEvent<HTMLTextAreaElement>) => onPromptChange(event.target.value)}
+            onChange={(event: ChangeEvent<HTMLTextAreaElement>) =>
+              onPromptChange(event.target.value)
+            }
             placeholder="What do you want to build today?"
             disabled={isGenerating}
           />
@@ -158,7 +164,8 @@ export function ConversationPanel({
           <DialogHeader>
             <DialogTitle>Sign In Required</DialogTitle>
             <DialogDescription>
-              You need to be signed in to use the app. Please sign in with your Google account to continue.
+              You need to be signed in to use the app. Please sign in with your
+              Google account to continue.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -173,6 +180,5 @@ export function ConversationPanel({
         </DialogContent>
       </Dialog>
     </Card>
-  )
+  );
 }
-
