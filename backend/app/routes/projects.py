@@ -9,7 +9,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import PlainTextResponse, Response
 
-from app.dependencies import AsyncDBSession, CurrentUser, get_project_manager
+from app.dependencies import AsyncDBSession, CurrentUser, OptionalUser, get_project_manager
 from app.models.api import (
     ProjectFilesResponse,
     ProjectListItem,
@@ -367,14 +367,22 @@ async def fetch_preview_asset(
     project_id: str,
     asset_path: str,
     manager: ProjectManagerDep,
-    current_user: CurrentUser,
+    current_user: OptionalUser,
     db: AsyncDBSession,
-    token: str | None = None,
 ) -> Response:
-    try:
-        project = await manager.get_project(project_id, user_id=current_user.id, db=db)
-    except ProjectNotFoundError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    # If user is authenticated, validate ownership
+    if current_user is not None:
+        try:
+            project = await manager.get_project(project_id, user_id=current_user.id, db=db)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+    else:
+        # If no authentication, still allow access but don't validate ownership
+        # This is needed for Docker/iframe scenarios where cookies might not be forwarded
+        try:
+            project = await manager.get_project(project_id, user_id=None, db=db)
+        except ProjectNotFoundError as exc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
 
     preview_root = (project.project_dir / "generated-app").resolve()
 
