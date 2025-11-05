@@ -68,7 +68,7 @@ export default function Home() {
               <div className="flex-1 flex items-center justify-between min-w-0 gap-4">
                 <div className="min-w-0">
                   <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className="bg-transparent p-0 h-auto">
+                    <TabsList>
                       <TabsTrigger value="code" className="gap-2 flex-none">
                         <Code2 className="h-4 w-4 shrink-0" />
                         {activeTab === "code" && <span>Code</span>}
