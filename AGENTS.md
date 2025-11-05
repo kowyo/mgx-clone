@@ -14,7 +14,7 @@ This project is an AI-powered web application builder that transforms natural la
 
 **Live Preview Window** - An embedded iframe displays the running application in real-time, allowing users to interact with their generated app immediately.
 
-**Status Panel** - Real-time logs and error messages stream from the backend, providing visibility into the generation process and helping users understand what is happening.
+**Project Management** - Users can create multiple projects, switch between them, and continue refining their applications with new prompts.
 
 ## Development Tips
 
