@@ -390,7 +390,7 @@ export function useGenerationSession(): UseGenerationSessionReturn {
     setProjectStatus(null)
     setFileOrder([])
     setFileContents({})
-    setSelectedFile(null)
+    setSelectedFileState(null)
     setPreviewUrl("")
   }, [closeWebSocket])
 

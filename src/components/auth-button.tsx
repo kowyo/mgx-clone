@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useSession, signIn, signOut } from "@/lib/auth-client"
 import { Loader2 } from "lucide-react"
@@ -37,8 +38,13 @@ export { GoogleLogo }
 
 export function AuthButton() {
   const { data: session, isPending } = useSession()
+  const [hasMounted, setHasMounted] = useState(false)
 
-  if (isPending) {
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  if (!hasMounted || isPending) {
     return (
       <Button variant="ghost" size="sm" disabled>
         <Loader2 className="h-4 w-4 animate-spin mr-2" />
