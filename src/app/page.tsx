@@ -40,7 +40,7 @@ export default function Home() {
   return (
     <div className="flex h-screen flex-col bg-background min-w-0 overflow-x-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-card/95 backdrop-blur min-w-0">
+      <header className="bg-card/95 backdrop-blur min-w-0">
         <div className="flex h-12 w-full items-center min-w-0">
           <div
             className="flex items-center gap-3 px-4"
@@ -100,7 +100,7 @@ export default function Home() {
           <ResizablePanel
             defaultSize={80}
             minSize={20}
-            className="flex min-h-0 h-full min-w-0"
+            className="flex min-h-0 w min-w-0"
           >
             <div className="flex w-full flex-1 flex-col h-full min-w-0 overflow-hidden">
               <Card className="flex flex-1 flex-col overflow-hidden border-border/80 bg-card/80 shadow-sm h-full min-w-0">
