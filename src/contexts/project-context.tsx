@@ -1,7 +1,10 @@
 "use client"
 
 import { createContext, useContext, type ReactNode } from "react"
-import { useGenerationSession, type UseGenerationSessionReturn } from "@/hooks/use-generation-session"
+import {
+  useGenerationSession,
+  type UseGenerationSessionReturn,
+} from "@/hooks/use-generation-session"
 
 type ProjectContextValue = UseGenerationSessionReturn
 
@@ -9,7 +12,7 @@ const ProjectContext = createContext<ProjectContextValue | null>(null)
 
 export function ProjectProvider({ children }: { children: ReactNode }) {
   const session = useGenerationSession()
-  
+
   return (
     <ProjectContext.Provider value={session}>
       {children}
@@ -24,4 +27,3 @@ export function useProjectContext() {
   }
   return context
 }
-

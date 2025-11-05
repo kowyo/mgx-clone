@@ -16,7 +16,10 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Skeleton } from "@/components/ui/skeleton"
-import { fetchUserProjects, type ProjectListItem } from "@/hooks/generation/services/projects-list-service"
+import {
+  fetchUserProjects,
+  type ProjectListItem,
+} from "@/hooks/generation/services/projects-list-service"
 import { FolderOpen, SquarePen } from "lucide-react"
 import { useProjectContext } from "@/contexts/project-context"
 
@@ -76,8 +79,12 @@ export function ProjectsSidebar() {
             {!session?.user ? (
               <div className="flex flex-col items-center justify-center p-8 text-center">
                 <FolderOpen className="mb-3 h-8 w-8 text-muted-foreground" />
-                <p className="text-sm font-medium text-foreground">Sign in to view projects</p>
-                <p className="mt-1 text-xs text-muted-foreground">Your projects will appear here once you sign in.</p>
+                <p className="text-sm font-medium text-foreground">
+                  Sign in to view projects
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Your projects will appear here once you sign in.
+                </p>
               </div>
             ) : loading ? (
               <div className="space-y-2 p-2">
@@ -87,14 +94,20 @@ export function ProjectsSidebar() {
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center p-8 text-center">
-                <p className="text-sm font-medium text-foreground">Error loading projects</p>
+                <p className="text-sm font-medium text-foreground">
+                  Error loading projects
+                </p>
                 <p className="mt-1 text-xs text-muted-foreground">{error}</p>
               </div>
             ) : projects.length === 0 ? (
               <div className="flex flex-col items-center justify-center p-8 text-center">
                 <FolderOpen className="mb-3 h-8 w-8 text-muted-foreground" />
-                <p className="text-sm font-medium text-foreground">No projects yet</p>
-                <p className="mt-1 text-xs text-muted-foreground">Create your first project to see it here.</p>
+                <p className="text-sm font-medium text-foreground">
+                  No projects yet
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Create your first project to see it here.
+                </p>
               </div>
             ) : (
               <SidebarMenu>
@@ -110,7 +123,7 @@ export function ProjectsSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter/>
+      <SidebarFooter />
     </Sidebar>
   )
 }
