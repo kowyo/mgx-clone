@@ -31,7 +31,6 @@ export default function Home() {
     setSelectedFile,
     handleGenerate,
     handleRefreshPreview,
-    loadProject,
     resetForNewChat,
     codeViewerLoading,
   } = useProjectContext()
