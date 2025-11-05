@@ -110,7 +110,7 @@ export default function Home() {
                   />
                 </div>
               </ResizablePanel>
-              <ResizableHandle withHandle className="bg-transparent" />
+              <ResizableHandle className="bg-transparent" />
               <ResizablePanel
                 defaultSize={80}
                 minSize={20}
