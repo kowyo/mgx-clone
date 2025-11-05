@@ -38,9 +38,9 @@ export default function Home() {
   const [leftPanelSize, setLeftPanelSize] = useState(20)
 
   return (
-    <div className="flex h-screen flex-col bg-background min-w-0 w-full overflow-x-hidden">
+    <div className="flex h-screen flex-col bg-background min-w-0 overflow-x-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-card/95 backdrop-blur min-w-0 w-full">
+      <header className="sticky top-0 z-20 bg-card/95 backdrop-blur min-w-0">
         <div className="flex h-12 w-full items-center min-w-0">
           <div
             className="flex items-center gap-3 px-4"

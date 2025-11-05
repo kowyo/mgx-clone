@@ -14,9 +14,8 @@ export function AppShell({ children }: AppShellProps) {
     <ProjectProvider>
       <SidebarProvider defaultOpen={false}>
         <ProjectsSidebar />
-        <SidebarInset>{children}</SidebarInset>
+        <SidebarInset className="overflow-x-hidden">{children}</SidebarInset>
       </SidebarProvider>
     </ProjectProvider>
   )
 }
-
