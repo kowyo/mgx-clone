@@ -1,17 +1,9 @@
 "use client"
 
-import { FormEvent, ChangeEvent, useMemo, useState } from "react"
+import { FormEvent, ChangeEvent, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { ConversationMessage, LogEntry } from "@/hooks/use-generation-session"
 import { Card } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
 import {
   PromptInput,
   PromptInputTextarea,
@@ -27,8 +19,7 @@ import {
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation"
 import { Sparkles } from "lucide-react"
-import { useSession, signIn } from "@/lib/auth-client"
-import { GoogleLogo } from "@/components/auth-button"
+import { useSession } from "@/lib/auth-client"
 import { Streamdown } from "streamdown"
 
 interface ConversationPanelProps {
@@ -49,7 +40,7 @@ export function ConversationPanel({
   isGenerating,
 }: ConversationPanelProps) {
   const { data: session } = useSession()
-  const [showLoginDialog, setShowLoginDialog] = useState(false)
+  const router = useRouter()
   const orderedMessages = useMemo(
     () => [...messages].sort((a, b) => a.createdAt - b.createdAt),
     [messages]
@@ -64,17 +55,10 @@ export function ConversationPanel({
 
     // Check if user is logged in
     if (!session?.user) {
-      setShowLoginDialog(true)
+      router.push("/login")
       return
     }
     void onSubmit()
-  }
-
-  const handleLogin = () => {
-    signIn.social({
-      provider: "google",
-    })
-    setShowLoginDialog(false)
   }
 
   return (
@@ -117,27 +101,6 @@ export function ConversationPanel({
           <PromptInputSubmit disabled={disableSend} status={"ready"} />
         </PromptInputFooter>
       </PromptInput>
-
-      <Dialog open={showLoginDialog} onOpenChange={setShowLoginDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Sign In Required</DialogTitle>
-            <DialogDescription>
-              You need to be signed in to use the app. Please sign in with your
-              Google account to continue.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowLoginDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleLogin}>
-              <GoogleLogo />
-              Sign in with Google
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   )
 }
