@@ -62,11 +62,6 @@ export function CodeViewer({
           <p className="text-sm">
             {loading ? "Awaiting generated files..." : "No code generated yet"}
           </p>
-          {!loading && (
-            <p className="mt-1 text-xs">
-              Enter a prompt and click Generate to start
-            </p>
-          )}
         </div>
       </div>
     )
