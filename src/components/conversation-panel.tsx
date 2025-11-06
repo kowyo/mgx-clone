@@ -3,7 +3,6 @@
 import { FormEvent, ChangeEvent, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { ConversationMessage } from "@/hooks/use-generation-session"
-import { Card } from "@/components/ui/card"
 import {
   PromptInput,
   PromptInputTextarea,
@@ -60,7 +59,7 @@ export function ConversationPanel({
   }
 
   return (
-    <Card className="flex h-full min-h-[520px] flex-col">
+    <div className="flex h-full min-h-[520px] flex-col">
       <Conversation className="flex-1">
         <ConversationContent>
           {orderedMessages.length === 0 ? (
@@ -99,6 +98,6 @@ export function ConversationPanel({
           <PromptInputSubmit disabled={disableSend} status={"ready"} />
         </PromptInputFooter>
       </PromptInput>
-    </Card>
+    </div>
   )
 }
