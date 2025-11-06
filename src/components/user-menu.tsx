@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession, signOut } from "@/lib/auth-client"
 import { Avatar, AvatarImage } from "@/components/ui/avatar"
+import { LogOut } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,7 +58,10 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
+        <DropdownMenuItem onClick={handleSignOut}>
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
