@@ -2,7 +2,7 @@
 
 import { FormEvent, ChangeEvent, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { ConversationMessage, LogEntry } from "@/hooks/use-generation-session"
+import { ConversationMessage } from "@/hooks/use-generation-session"
 import { Card } from "@/components/ui/card"
 import {
   PromptInput,
@@ -24,7 +24,6 @@ import { Streamdown } from "streamdown"
 
 interface ConversationPanelProps {
   messages: ConversationMessage[]
-  logs: LogEntry[]
   prompt: string
   onPromptChange: (value: string) => void
   onSubmit: () => void | Promise<void>
@@ -33,7 +32,6 @@ interface ConversationPanelProps {
 
 export function ConversationPanel({
   messages,
-  logs,
   prompt,
   onPromptChange,
   onSubmit,

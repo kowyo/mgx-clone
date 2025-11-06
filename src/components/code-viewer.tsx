@@ -4,7 +4,6 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { FileCode } from "lucide-react"
 import { FileTree } from "@/components/file-tree"
 import { CodeBlockContent } from "@/components/ui/shadcn-io/code-block"
-import { useState } from "react"
 
 interface CodeViewerProps {
   files: Array<{ path: string; content?: string }>

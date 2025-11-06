@@ -24,7 +24,6 @@ export default function Home() {
     prompt,
     setPrompt,
     isGenerating,
-    logs,
     messages,
     activeTab,
     setActiveTab,
@@ -34,7 +33,6 @@ export default function Home() {
     setSelectedFile,
     handleGenerate,
     handleRefreshPreview,
-    resetForNewChat,
     codeViewerLoading,
   } = useProjectContext()
 
@@ -98,7 +96,6 @@ export default function Home() {
             <div className="flex w-full flex-1 flex-col h-full min-w-0 overflow-hidden">
               <ConversationPanel
                 messages={messages}
-                logs={logs}
                 prompt={prompt}
                 onPromptChange={setPrompt}
                 onSubmit={handleGenerate}

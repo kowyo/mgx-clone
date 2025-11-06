@@ -264,7 +264,7 @@ export function useGenerationSession(): UseGenerationSessionReturn {
           status: "pending",
         }))
       },
-      onResultMessage: (payload) => {
+      onResultMessage: (_payload) => {
         updateActiveAssistantMessage((msg) => ({
           content: msg.content,
           status: "complete",

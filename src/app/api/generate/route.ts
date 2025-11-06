@@ -149,7 +149,7 @@ button:hover {
       preview_url: previewUrl,
       project_id: `project-${Date.now()}`,
     })
-  } catch (error) {
+  } catch {
     return NextResponse.json(
       { error: "Failed to generate app" },
       { status: 500 }
