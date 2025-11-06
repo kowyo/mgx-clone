@@ -57,10 +57,10 @@ export default function Home() {
   }, [])
 
   return (
-    <div className="flex h-screen flex-col bg-background min-w-0 overflow-x-hidden">
+    <div className="flex h-screen flex-col bg-background">
       {/* Header */}
-      <header className="bg-card/95 backdrop-blur min-w-0">
-        <div className="flex h-12 w-full items-center min-w-0">
+      <header className="bg-card/95 backdrop-blur">
+        <div className="flex h-12 w-full items-center">
           <div
             className="flex items-center gap-3 px-2"
             style={{ width: leftPanelWidth > 0 ? `${leftPanelWidth}px` : '20%' }}
@@ -70,8 +70,7 @@ export default function Home() {
               <p className="text-sm font-semibold text-foreground">MGX</p>
             </div>
           </div>
-          <div className="flex-1 flex items-center justify-between min-w-0 gap-4">
-            <div className="min-w-0">
+          <div className="flex-1 flex items-center justify-between gap-4">
               <Tabs value={activeTab} onValueChange={setActiveTab}>
                 <TabsList>
                   <TabsTrigger value="code" className="gap-2 flex-none">
@@ -84,7 +83,6 @@ export default function Home() {
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
-            </div>
             <div className="mr-2">
               {session?.user ? (
                 <UserMenu />
@@ -99,17 +97,17 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-hidden min-w-0 overflow-x-hidden">
+      <main className="flex-1">
         <ResizablePanelGroup
           direction="horizontal"
-          className="flex h-full w-full min-w-0 overflow-x-hidden"
+          className="flex h-full w-full"
         >
           <ResizablePanel
             defaultSize={20}
             minSize={20}
-            className="flex min-h-0 h-full min-w-[300px]"
+            className="flex min-h-0 h-full min-w-[280px]"
           >
-            <div ref={leftPanelRef} className="flex w-full flex-1 flex-col h-full min-w-0 overflow-hidden">
+            <div ref={leftPanelRef} className="flex w-full flex-1 flex-col h-full">
               <ConversationPanel
                 messages={messages}
                 prompt={prompt}
@@ -123,10 +121,10 @@ export default function Home() {
           <ResizablePanel
             defaultSize={80}
             minSize={20}
-            className="flex min-h-0 w min-w-0 pb-2 pr-2"
+            className="flex min-h-0 pb-2 pr-2"
           >
-            <div className="flex w-full flex-1 flex-col h-full min-w-0 overflow-hidden">
-              <Card className="flex flex-1 flex-col overflow-hidden border-border/80 bg-card/80 shadow-sm h-full min-w-0">
+            <div className="flex w-full flex-1 flex-col h-full">
+              <Card className="flex flex-1 flex-col border-border/80 bg-card/80 shadow-sm h-full">
                 {activeTab === "code" && (
                   <CodeViewer
                     files={filesForViewer}
