@@ -1,18 +1,21 @@
 import { betterAuth } from "better-auth"
+import Database from "better-sqlite3"
 import { jwt } from "better-auth/plugins"
-import { db } from "./db"
 
 export const auth = betterAuth({
   baseURL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL || "http://localhost:3000",
   basePath: "/api/auth",
-  database: db, // Better-auth supports SQLite directly via Kysely adapter
-  emailAndPassword: {
-    enabled: false, // We only want Google SSO
-  },
+  database: new Database("./auth.db"),
+  emailAndPassword: { enabled: false },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+      mapProfileToUser: (profile) => ({
+        name: profile.name,
+        email: profile.email,
+        image: profile.picture,
+      }),
     },
   },
   secret:

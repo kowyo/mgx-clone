@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession, signOut } from "@/lib/auth-client"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
@@ -13,22 +14,23 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export function UserMenu() {
+  const [hasMounted, setHasMounted] = useState(false)
   const { data: session } = useSession()
   const router = useRouter()
+
+  useEffect(() => {
+    setHasMounted(true)
+  }, [])
+
+  if (!hasMounted) {
+    return null
+  }
 
   if (!session?.user) {
     return null
   }
 
   const user = session.user
-  const initials = user.name
-    ? user.name
-        .split(" ")
-        .map((n) => n[0])
-        .join("")
-        .toUpperCase()
-        .slice(0, 2)
-    : user.email?.[0]?.toUpperCase() || "U"
 
   const handleSignOut = async () => {
     await signOut()
@@ -40,8 +42,7 @@ export function UserMenu() {
       <DropdownMenuTrigger asChild>
         <button className="flex items-center gap-2 rounded-full hover:opacity-80 transition-opacity focus:outline-none">
           <Avatar>
-            <AvatarImage src={user.image || undefined} alt={user.name || user.email} />
-            <AvatarFallback>{initials}</AvatarFallback>
+            <AvatarImage src={user.image ?? undefined} />
           </Avatar>
         </button>
       </DropdownMenuTrigger>
@@ -53,11 +54,8 @@ export function UserMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleSignOut}>
-          Sign out
-        </DropdownMenuItem>
+        <DropdownMenuItem onClick={handleSignOut}>Sign out</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )
 }
-
