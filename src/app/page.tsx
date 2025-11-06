@@ -63,7 +63,9 @@ export default function Home() {
         <div className="flex h-12 w-full items-center">
           <div
             className="flex items-center gap-3 px-2"
-            style={{ width: leftPanelWidth > 0 ? `${leftPanelWidth}px` : '20%' }}
+            style={{
+              width: leftPanelWidth > 0 ? `${leftPanelWidth}px` : "20%",
+            }}
           >
             <Image src="/mgx-logo.png" alt="MGX Logo" width={24} height={24} />
             <div>
@@ -71,18 +73,18 @@ export default function Home() {
             </div>
           </div>
           <div className="flex-1 flex items-center justify-between gap-4">
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList>
-                  <TabsTrigger value="code" className="gap-2 flex-none">
-                    <Code2 className="h-4 w-4 shrink-0" />
-                    {activeTab === "code" && <span>Code</span>}
-                  </TabsTrigger>
-                  <TabsTrigger value="preview" className="gap-2 flex-none">
-                    <Eye className="h-4 w-4 shrink-0" />
-                    {activeTab === "preview" && <span>Preview</span>}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList>
+                <TabsTrigger value="code" className="gap-2 flex-none">
+                  <Code2 className="h-4 w-4 shrink-0" />
+                  {activeTab === "code" && <span>Code</span>}
+                </TabsTrigger>
+                <TabsTrigger value="preview" className="gap-2 flex-none">
+                  <Eye className="h-4 w-4 shrink-0" />
+                  {activeTab === "preview" && <span>Preview</span>}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
             <div className="mr-2">
               {session?.user ? (
                 <UserMenu />
@@ -107,7 +109,10 @@ export default function Home() {
             minSize={20}
             className="flex min-h-0 h-full min-w-[280px]"
           >
-            <div ref={leftPanelRef} className="flex w-full flex-1 flex-col h-full">
+            <div
+              ref={leftPanelRef}
+              className="flex w-full flex-1 flex-col h-full"
+            >
               <ConversationPanel
                 messages={messages}
                 prompt={prompt}
