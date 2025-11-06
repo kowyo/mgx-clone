@@ -1,6 +1,5 @@
 "use client"
 
-import { useRouter } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -17,14 +16,12 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
-  const router = useRouter()
-
   const handleLogin = async () => {
     try {
       await signIn.social({
         provider: "google",
+        callbackURL: "/",
       })
-      router.push("/")
     } catch (error) {
       console.error("Login error:", error)
     }

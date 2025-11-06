@@ -24,8 +24,13 @@ export function UserMenu() {
   const user = session.user
 
   const handleSignOut = async () => {
-    await signOut()
-    router.push("/login")
+    await signOut({
+      fetchOptions: {
+        onSuccess: () => {
+          router.push("/login")
+        },
+      },
+    })
   }
 
   return (
