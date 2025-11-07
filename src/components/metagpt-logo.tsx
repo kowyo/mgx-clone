@@ -22,4 +22,3 @@ export function MetaGPTLogo({ className }: MetaGPTLogoProps) {
     </svg>
   )
 }
-
