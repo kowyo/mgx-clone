@@ -129,22 +129,22 @@ export default function Home() {
             className="flex pb-2 pr-2"
           >
             <div className="flex w-full flex-1 flex-col ">
-              <Card className="flex flex-1 flex-col border-border/80 bg-card/80 shadow-sm ">
-                {activeTab === "code" && (
+              {activeTab === "code" && (
+                <Card className="flex flex-1 flex-col border-border/80 bg-card/80 shadow-sm ">
                   <CodeViewer
                     files={filesForViewer}
                     selectedFile={selectedFile}
                     onSelect={(path) => setSelectedFile(path)}
                     loading={codeViewerLoading}
                   />
-                )}
-                {activeTab === "preview" && (
-                  <PreviewWindow
-                    url={previewUrl}
-                    onRefresh={handleRefreshPreview}
-                  />
-                )}
-              </Card>
+                </Card>
+              )}
+              {activeTab === "preview" && (
+                <PreviewWindow
+                  url={previewUrl}
+                  onRefresh={handleRefreshPreview}
+                />
+              )}
             </div>
           </ResizablePanel>
         </ResizablePanelGroup>

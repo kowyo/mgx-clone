@@ -60,8 +60,8 @@ export function ConversationPanel({
 
   return (
     <div className="flex h-full flex-col">
-      <Conversation className="flex-1">
-        <ConversationContent>
+      <Conversation className="flex-1 px-2">
+        <ConversationContent className="px-2">
           {orderedMessages.length === 0 ? (
             <ConversationEmptyState
               title="Share your idea to begin"
