@@ -54,8 +54,8 @@ export function ProjectsSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader>
-        <SidebarTrigger />
+      <SidebarHeader className="flex-col items-center gap-2">
+        <SidebarTrigger className="size-8" />
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={resetForNewChat}>
