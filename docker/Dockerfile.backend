@@ -33,10 +33,6 @@ WORKDIR /app
 COPY --from=deps /app/.venv ./.venv
 COPY --from=builder /app/app ./app
 
-RUN mkdir -p /data/projects && \
-    chmod 777 /data && \
-    chmod 777 /data/projects
-
-VOLUME ["/data/projects"]
 EXPOSE 8000
 CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
