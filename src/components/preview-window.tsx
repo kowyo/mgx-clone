@@ -48,7 +48,7 @@ export function PreviewWindow({ url, onRefresh }: PreviewWindowProps) {
           <ExternalLink className="h-4 w-4" />
         </WebPreviewNavigationButton>
       </WebPreviewNavigation>
-      <WebPreviewBody src={url} />
+      <WebPreviewBody src={url} className="rounded-b-lg" />
     </WebPreview>
   )
 }
