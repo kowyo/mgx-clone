@@ -54,7 +54,7 @@ export function ProjectsSidebar() {
 
   return (
     <Sidebar collapsible="icon">
-      <SidebarHeader className="flex-col items-center gap-2">
+      <SidebarHeader>
         <SidebarTrigger className="size-8" />
         <SidebarMenu>
           <SidebarMenuItem>
