@@ -11,18 +11,6 @@ export const authClient = createAuthClient({
 
 export const { signIn, signOut, signUp, useSession } = authClient
 
-export const signInWithGitHub = async () => {
-  return await signIn.social({ provider: "github" })
-}
-
-export const signInWithGoogle = async () => {
-  return await signIn.social({ provider: "google" })
-}
-
-export const signInWithMicrosoft = async () => {
-  return await signIn.social({ provider: "microsoft" })
-}
-
 export type SessionData =
   | {
       session?: {
