@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/resizable"
 import { Code2, Eye } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { MetaGPTLogo } from "@/components/metagpt-logo"
+import { MetaGPTLogo } from "@/components/social-icons"
 import { CodeViewer } from "@/components/code-viewer"
 import { PreviewWindow } from "@/components/preview-window"
 import { useProjectContext } from "@/contexts/project-context"
@@ -67,7 +67,7 @@ export default function Home() {
               width: leftPanelWidth > 0 ? `${leftPanelWidth}px` : "20%",
             }}
           >
-            <MetaGPTLogo className="size-6" />
+            <MetaGPTLogo/>
             <div>
               <p className="text-sm font-semibold text-foreground">MGX</p>
             </div>
