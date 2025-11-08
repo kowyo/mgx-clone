@@ -77,6 +77,26 @@ export function LoginForm({
                   <span>Sign with GitHub</span>
                 </Button>
               </Field>
+              <Field>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={async () => {
+                    await signIn.social({
+                      provider: "microsoft",
+                      callbackURL: "/",
+                    })
+                  }}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+                    <path fill="#F25022" d="M11 11H3V3h8z" />
+                    <path fill="#00A4EF" d="M21 11h-8V3h8z" />
+                    <path fill="#7FBA00" d="M11 21H3v-8h8z" />
+                    <path fill="#FFB900" d="M21 21h-8v-8h8z" />
+                  </svg>
+                  <span>Sign with Microsoft</span>
+                </Button>
+              </Field>
             </FieldGroup>
           </form>
         </CardContent>

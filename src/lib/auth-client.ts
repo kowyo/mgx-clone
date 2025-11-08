@@ -19,6 +19,10 @@ export const signInWithGoogle = async () => {
   return await signIn.social({ provider: "google" })
 }
 
+export const signInWithMicrosoft = async () => {
+  return await signIn.social({ provider: "microsoft" })
+}
+
 export type SessionData =
   | {
       session?: {
