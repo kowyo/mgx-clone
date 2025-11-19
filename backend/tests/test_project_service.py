@@ -1,11 +1,9 @@
-import asyncio
-from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.models.project import Project, ProjectStatus
+from app.models.project import ProjectStatus
 from app.models.project_db import Base
 from app.repositories.project_repository import ProjectRepository
 from app.services.build_service import BuildService
@@ -22,11 +20,11 @@ async def db_session():
     engine = create_async_engine("sqlite+aiosqlite:///:memory:")
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     SessionLocal = async_sessionmaker(engine, expire_on_commit=False)
     async with SessionLocal() as session:
         yield session
-    
+
     await engine.dispose()
 
 
@@ -80,12 +78,12 @@ async def test_run_generation(tmp_path, db_session, session_factory):
     task_service = TaskService()
     build_service = BuildService([])
     preview_service = PreviewService("/api")
-    
+
     claude_service = MagicMock(spec=ClaudeService)
     claude_service.is_available = True
     claude_service.generate = AsyncMock()
     claude_service.generate.return_value.preview_path = "index.html"
-    
+
     fallback_generator = MagicMock(spec=FallbackGenerator)
 
     service = ProjectService(
@@ -101,12 +99,14 @@ async def test_run_generation(tmp_path, db_session, session_factory):
     )
 
     project = await service.create_project("user1", "Test prompt", None)
-    
+
     # Mock build service to return a preview path
     build_service.run_post_generation_steps = AsyncMock(return_value="index.html")
-    
+
     # Mock preview service
-    preview_service.build_preview_url = MagicMock(return_value="/api/projects/p1/preview/index.html")
+    preview_service.build_preview_url = MagicMock(
+        return_value="/api/projects/p1/preview/index.html"
+    )
 
     task = await service.run_generation(project.id)
     await task

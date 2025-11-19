@@ -4,8 +4,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.services.build_service import BuildService
 import app.services.build_service as build_service_module
+from app.services.build_service import BuildService
 
 
 @pytest.mark.asyncio
@@ -110,4 +110,3 @@ async def test_post_generation_detects_nested_package_json(monkeypatch, tmp_path
     ]
     assert any("Detected package.json in subdirectory 'todo-app'" in msg for msg in emitted)
     assert any("todo-app/dist/index.html" in msg for msg in emitted)
-

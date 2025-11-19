@@ -89,13 +89,13 @@ class ProjectRepository:
         query = select(ProjectDB).where(ProjectDB.id == project_id)
         if user_id:
             query = query.where(ProjectDB.user_id == user_id)
-        
+
         result = await self.session.execute(query)
         project_db = result.scalar_one_or_none()
-        
+
         if not project_db:
             raise ProjectNotFoundError(project_id)
-            
+
         return self._project_db_to_model(project_db)
 
     async def list_user_projects(
@@ -111,32 +111,24 @@ class ProjectRepository:
         projects_db = result.scalars().all()
         return [self._project_db_to_model(p) for p in projects_db]
 
-    async def update_project_status(
-        self, project_id: str, status: ProjectStatus
-    ) -> Project:
-        result = await self.session.execute(
-            select(ProjectDB).where(ProjectDB.id == project_id)
-        )
+    async def update_project_status(self, project_id: str, status: ProjectStatus) -> Project:
+        result = await self.session.execute(select(ProjectDB).where(ProjectDB.id == project_id))
         project_db = result.scalar_one_or_none()
         if not project_db:
             raise ProjectNotFoundError(project_id)
-            
+
         project_db.status = status.value
         project_db.updated_at = datetime.now(UTC)
         await self.session.commit()
         await self.session.refresh(project_db)
         return self._project_db_to_model(project_db)
 
-    async def update_project_preview_url(
-        self, project_id: str, preview_url: str
-    ) -> Project:
-        result = await self.session.execute(
-            select(ProjectDB).where(ProjectDB.id == project_id)
-        )
+    async def update_project_preview_url(self, project_id: str, preview_url: str) -> Project:
+        result = await self.session.execute(select(ProjectDB).where(ProjectDB.id == project_id))
         project_db = result.scalar_one_or_none()
         if not project_db:
             raise ProjectNotFoundError(project_id)
-            
+
         project_db.preview_url = preview_url
         project_db.updated_at = datetime.now(UTC)
         await self.session.commit()
@@ -144,13 +136,11 @@ class ProjectRepository:
         return self._project_db_to_model(project_db)
 
     async def update_project_prompt(self, project_id: str, prompt: str) -> Project:
-        result = await self.session.execute(
-            select(ProjectDB).where(ProjectDB.id == project_id)
-        )
+        result = await self.session.execute(select(ProjectDB).where(ProjectDB.id == project_id))
         project_db = result.scalar_one_or_none()
         if not project_db:
             raise ProjectNotFoundError(project_id)
-            
+
         project_db.prompt = prompt
         project_db.updated_at = datetime.now(UTC)
         await self.session.commit()
@@ -199,9 +189,7 @@ class ProjectRepository:
         )
         return [self._message_db_to_model(m) for m in result.scalars().all()]
 
-    async def update_message_content(
-        self, message_id: str, content: str
-    ) -> ProjectMessage | None:
+    async def update_message_content(self, message_id: str, content: str) -> ProjectMessage | None:
         result = await self.session.execute(
             select(ProjectMessageDB).where(ProjectMessageDB.id == message_id)
         )
@@ -233,4 +221,3 @@ class ProjectRepository:
         await self.session.commit()
         await self.session.refresh(message_db)
         return self._message_db_to_model(message_db)
-

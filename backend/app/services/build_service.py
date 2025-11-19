@@ -166,4 +166,3 @@ class BuildService:
         if len(text) > limit:
             text = f"{text[:limit]}\n[output]"
         return f"{label}:\n{text}"
-

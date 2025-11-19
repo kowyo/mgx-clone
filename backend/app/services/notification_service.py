@@ -58,4 +58,3 @@ class NotificationService:
         async with self._lock:
             self._subscribers.clear()
             self._history.clear()
-

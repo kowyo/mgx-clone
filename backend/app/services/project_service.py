@@ -2,12 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import json
-from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.models.api import ProjectFileEntry
 from app.models.project import (
@@ -21,7 +20,7 @@ from app.models.project_message import (
     ProjectMessageRole,
     ProjectMessageStatus,
 )
-from app.repositories.project_repository import ProjectRepository, ProjectNotFoundError
+from app.repositories.project_repository import ProjectNotFoundError, ProjectRepository
 from app.services.build_service import BuildService
 from app.services.claude_service import ClaudeService, ClaudeServiceUnavailable
 from app.services.fallback_generator import FallbackGenerator
@@ -145,11 +144,11 @@ class ProjectService:
     ) -> asyncio.Task[None]:
         # We need to capture the necessary context for the background task
         # The background task will create its own session and repository
-        
+
         async def worker() -> None:
             async with self.session_factory() as session:
                 repo = ProjectRepository(session)
-                
+
                 assistant_message_id: str | None = None
                 assistant_content: str = ""
                 result_metadata: dict[str, Any] | None = None
@@ -179,7 +178,7 @@ class ProjectService:
                             result_metadata = metadata
                     elif status == ProjectMessageStatus.ERROR:
                         message_failed = True
-                    
+
                     payload = metadata if metadata is not None else result_metadata
                     if assistant_message_id:
                         await repo.update_message_status(
@@ -205,7 +204,9 @@ class ProjectService:
                     if event_type == "assistant_message":
                         text = payload.get("text")
                         if isinstance(text, str) and text.strip():
-                            assistant_content = merge_content(assistant_content, text, separator="\n")
+                            assistant_content = merge_content(
+                                assistant_content, text, separator="\n"
+                            )
                             await persist_content()
                     elif event_type == "tool_use":
                         tool_name = payload.get("name") or "tool"
@@ -218,7 +219,9 @@ class ProjectService:
                                 serialized = str(tool_input)
                             details = f":\n```json\n{serialized}\n```"
                         tool_message = f"Tool use {tool_name}{details}"
-                        assistant_content = merge_content(assistant_content, tool_message, separator="\n\n")
+                        assistant_content = merge_content(
+                            assistant_content, tool_message, separator="\n\n"
+                        )
                         await persist_content()
                     elif event_type == "result_message":
                         cost = payload.get("total_cost_usd")
@@ -229,7 +232,9 @@ class ProjectService:
                         input_tokens = usage.get("input_tokens")
                         output_tokens = usage.get("output_tokens")
                         if isinstance(input_tokens, int) and isinstance(output_tokens, int):
-                            summary_parts.append(f"{input_tokens} input + {output_tokens} output tokens")
+                            summary_parts.append(
+                                f"{input_tokens} input + {output_tokens} output tokens"
+                            )
                         elif isinstance(input_tokens, int):
                             summary_parts.append(f"{input_tokens} input tokens")
                         elif isinstance(output_tokens, int):
@@ -237,7 +242,9 @@ class ProjectService:
                         summary = "Complete"
                         if summary_parts:
                             summary = f"Complete ({', '.join(summary_parts)})"
-                        assistant_content = merge_content(assistant_content, summary, separator="\n\n")
+                        assistant_content = merge_content(
+                            assistant_content, summary, separator="\n\n"
+                        )
                         await persist_content()
                         await persist_status(ProjectMessageStatus.COMPLETE, payload)
 
@@ -278,7 +285,7 @@ class ProjectService:
                     return
 
                 intro_text = (assistant_intro or "").strip()
-                
+
                 placeholder = await repo.create_message(
                     project_id=project_id,
                     role=ProjectMessageRole.ASSISTANT,
@@ -304,7 +311,7 @@ class ProjectService:
                         payload={"status": ProjectStatus.RUNNING.value},
                     )
                 )
-                
+
                 await emit_log("Starting project generation...")
 
                 generation_root = project.project_dir / "generated-app"
@@ -398,7 +405,9 @@ class ProjectService:
                             separator="\n\n",
                         )
                         await persist_content()
-                        await persist_status(ProjectMessageStatus.ERROR, {"error": "generation_failed"})
+                        await persist_status(
+                            ProjectMessageStatus.ERROR, {"error": "generation_failed"}
+                        )
                         await repo.update_project_status(project_id, ProjectStatus.FAILED)
                         await self.notification_service.publish_event(
                             ProjectEvent(

@@ -19,14 +19,14 @@ load_dotenv()
 async def lifespan(app: FastAPI):
     # Initialize database
     await init_db()
-    
+
     # Initialize services
     notification_service = NotificationService()
     task_service = TaskService()
-    
+
     app.state.notification_service = notification_service
     app.state.task_service = task_service
-    
+
     try:
         yield
     finally:

@@ -124,7 +124,7 @@ class PreviewService:
         asset_path: str,
     ) -> tuple[Path, str]:
         """Resolve an asset path within a project directory.
-        
+
         Returns:
             Tuple of (absolute_path, media_type)
         """
@@ -177,4 +177,3 @@ class PreviewService:
 
         media_type = mimetypes.guess_type(selected_path.name)[0] or "application/octet-stream"
         return selected_path, media_type
-
