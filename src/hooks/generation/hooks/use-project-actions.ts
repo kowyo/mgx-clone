@@ -3,7 +3,11 @@ import { beginConversationTurn } from "../utils/conversation"
 import { getAuthHeaders } from "../utils/api"
 import { startPolling, stopPolling } from "../services/project-service"
 import type { ProjectServiceHandlers } from "../services/project-service"
-import type { ConversationStatus, ConversationMessage, InlineGeneratedFile } from "../types"
+import type {
+  ConversationStatus,
+  ConversationMessage,
+  InlineGeneratedFile,
+} from "../types"
 import type { useProjectState } from "./use-project-state"
 import type { useProjectWebSocket } from "./use-project-websocket"
 import type { useFileService } from "./use-file-service"
@@ -559,4 +563,3 @@ export function useProjectActions(
     resetForNewChat,
   }
 }
-

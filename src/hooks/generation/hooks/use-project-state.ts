@@ -1,9 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react"
-import type {
-  LogEntry,
-  ConversationMessage,
-  ViewerFile,
-} from "../types"
+import type { LogEntry, ConversationMessage, ViewerFile } from "../types"
 import { updateMessage } from "../utils/conversation"
 
 export function useProjectState() {
@@ -81,7 +77,7 @@ export function useProjectState() {
     basePreviewUrlRef.current = ""
     previewUrlWithTokenRef.current = ""
     projectIdRef.current = null
-    
+
     setProjectId(null)
     setProjectStatus(null)
     setFileOrder([])
@@ -143,4 +139,3 @@ export function useProjectState() {
     resetFullState,
   }
 }
-

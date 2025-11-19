@@ -38,7 +38,14 @@ export function useFileService(
       getApiBaseUrl: () => apiBaseUrl,
       getAuthHeaders: async () => getAuthHeaders(session),
     }),
-    [addLog, apiBaseUrl, session, setFileOrder, setFileContents, fileContentsRef]
+    [
+      addLog,
+      apiBaseUrl,
+      session,
+      setFileOrder,
+      setFileContents,
+      fileContentsRef,
+    ]
   )
 
   const fetchProjectFilesHandler = useCallback(async () => {
@@ -54,11 +61,17 @@ export function useFileService(
       pendingFetchesRef,
       filesErrorLoggedRef
     )
-  }, [fileServiceHandlers, projectIdRef, metadataRef, fileContentsRef, pendingFetchesRef, filesErrorLoggedRef])
+  }, [
+    fileServiceHandlers,
+    projectIdRef,
+    metadataRef,
+    fileContentsRef,
+    pendingFetchesRef,
+    filesErrorLoggedRef,
+  ])
 
   return {
     fileServiceHandlers,
     fetchProjectFilesHandler,
   }
 }
-

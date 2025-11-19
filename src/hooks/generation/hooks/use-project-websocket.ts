@@ -67,7 +67,13 @@ export function useProjectWebSocket(
         }
       }
     },
-    [backendOrigin, session, basePreviewUrlRef, previewUrlWithTokenRef, setPreviewUrl]
+    [
+      backendOrigin,
+      session,
+      basePreviewUrlRef,
+      previewUrlWithTokenRef,
+      setPreviewUrl,
+    ]
   )
 
   const wsHandlers: WebSocketMessageHandler = useMemo(
@@ -189,4 +195,3 @@ export function useProjectWebSocket(
     updatePreview,
   }
 }
-
