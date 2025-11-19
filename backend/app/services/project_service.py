@@ -280,7 +280,8 @@ class ProjectService:
                     project = await repo.get_project(project_id)
                 except ProjectNotFoundError:
                     await emit_log("Project not found; aborting generation.")
-                    # Can't persist status if project not found, but maybe we can if we have message ID?
+                    # Can't persist status if project not found, 
+                    # but maybe we can if we have message ID?
                     # But we don't have message ID yet.
                     return
 

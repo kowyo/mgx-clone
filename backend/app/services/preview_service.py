@@ -157,7 +157,6 @@ class PreviewService:
                 candidate_paths.append((fallback_path, fallback_relative))
 
         selected_path: Path | None = None
-        selected_relative: Path | None = None
         for candidate_full, candidate_relative in candidate_paths:
             if "node_modules" in candidate_relative.parts:
                 continue
@@ -165,7 +164,6 @@ class PreviewService:
             if not exists:
                 continue
             selected_path = candidate_full
-            selected_relative = candidate_relative
             break
 
         if selected_path is None:
