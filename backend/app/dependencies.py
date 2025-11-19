@@ -4,6 +4,7 @@ from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.requests import HTTPConnection
 
 from app.config import settings
 from app.database import AsyncSessionLocal, get_db
@@ -156,12 +157,12 @@ async def get_current_user_optional(
 OptionalUser = Annotated[User | None, Depends(get_current_user_optional)]
 
 
-def get_notification_service(request: Request) -> NotificationService:
-    return request.app.state.notification_service
+def get_notification_service(connection: HTTPConnection) -> NotificationService:
+    return connection.app.state.notification_service
 
 
-def get_task_service(request: Request) -> TaskService:
-    return request.app.state.task_service
+def get_task_service(connection: HTTPConnection) -> TaskService:
+    return connection.app.state.task_service
 
 
 def get_build_service() -> BuildService:
