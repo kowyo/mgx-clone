@@ -43,7 +43,7 @@ async def test_create_project(tmp_path, db_session, session_factory):
     repo = ProjectRepository(db_session)
     notification_service = NotificationService()
     task_service = TaskService()
-    build_service = BuildService([])
+    build_service = BuildService()
     preview_service = PreviewService("/api")
     claude_service = MagicMock(spec=ClaudeService)
     fallback_generator = MagicMock(spec=FallbackGenerator)
@@ -76,7 +76,7 @@ async def test_run_generation(tmp_path, db_session, session_factory):
     repo = ProjectRepository(db_session)
     notification_service = NotificationService()
     task_service = TaskService()
-    build_service = BuildService([])
+    build_service = BuildService()
     preview_service = PreviewService("/api")
 
     claude_service = MagicMock(spec=ClaudeService)
