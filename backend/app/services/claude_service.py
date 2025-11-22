@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -38,8 +38,8 @@ class ClaudeServiceUnavailable(RuntimeError):
 class ClaudeService:
     """Thin wrapper around the Claude Agent SDK that streams messages via a callback."""
 
-    def __init__(self, allowed_commands: Sequence[str]) -> None:
-        self._allowed_commands = list(allowed_commands)
+    def __init__(self) -> None:
+        pass
 
     @property
     def is_available(self) -> bool:
@@ -59,7 +59,7 @@ class ClaudeService:
         if ClaudeSDKClient is None:  # pragma: no cover - defensive guard
             raise ClaudeServiceUnavailable("Claude Agent SDK is not installed")
 
-        options = build_claude_options(project_root, self._allowed_commands)
+        options = build_claude_options(project_root)
         async with ClaudeSDKClient(options=options) as client:  # type: ignore[arg-type]
             await client.query(prompt=self._compose_prompt(prompt, template))
 

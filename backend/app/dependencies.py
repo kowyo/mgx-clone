@@ -4,11 +4,20 @@ from typing import Annotated
 
 from fastapi import Depends, Header, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.requests import HTTPConnection
 
-from app.database import get_db
+from app.config import settings
+from app.database import AsyncSessionLocal, get_db
 from app.models.user import User
+from app.repositories.project_repository import ProjectRepository
 from app.services.auth_service import auth_service
-from app.services.project_service import ProjectManager, project_manager
+from app.services.build_service import BuildService
+from app.services.claude_service import ClaudeService
+from app.services.fallback_generator import FallbackGenerator
+from app.services.notification_service import NotificationService
+from app.services.preview_service import PreviewService
+from app.services.project_service import ProjectService
+from app.services.task_service import TaskService
 
 AsyncDBSession = Annotated[AsyncSession, Depends(get_db)]
 
@@ -148,7 +157,54 @@ async def get_current_user_optional(
 OptionalUser = Annotated[User | None, Depends(get_current_user_optional)]
 
 
-def get_project_manager() -> ProjectManager:
-    """FastAPI dependency that returns the shared project manager."""
+def get_notification_service(connection: HTTPConnection) -> NotificationService:
+    return connection.app.state.notification_service
 
-    return project_manager
+
+def get_task_service(connection: HTTPConnection) -> TaskService:
+    return connection.app.state.task_service
+
+
+def get_build_service() -> BuildService:
+    return BuildService()
+
+
+def get_preview_service() -> PreviewService:
+    return PreviewService(settings.api_prefix)
+
+
+def get_claude_service() -> ClaudeService:
+    return ClaudeService()
+
+
+def get_fallback_generator() -> FallbackGenerator:
+    return FallbackGenerator()
+
+
+def get_project_repository(db: AsyncDBSession) -> ProjectRepository:
+    return ProjectRepository(db)
+
+
+def get_project_service(
+    repository: Annotated[ProjectRepository, Depends(get_project_repository)],
+    notification_service: Annotated[NotificationService, Depends(get_notification_service)],
+    task_service: Annotated[TaskService, Depends(get_task_service)],
+    build_service: Annotated[BuildService, Depends(get_build_service)],
+    preview_service: Annotated[PreviewService, Depends(get_preview_service)],
+    claude_service: Annotated[ClaudeService, Depends(get_claude_service)],
+    fallback_generator: Annotated[FallbackGenerator, Depends(get_fallback_generator)],
+) -> ProjectService:
+    return ProjectService(
+        repository=repository,
+        notification_service=notification_service,
+        task_service=task_service,
+        build_service=build_service,
+        preview_service=preview_service,
+        claude_service=claude_service,
+        fallback_generator=fallback_generator,
+        session_factory=AsyncSessionLocal,
+        base_dir=settings.projects_root,
+    )
+
+
+ProjectServiceDep = Annotated[ProjectService, Depends(get_project_service)]

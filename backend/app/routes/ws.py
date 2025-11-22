@@ -1,36 +1,28 @@
 from __future__ import annotations
 
-from typing import Annotated
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
-
-from app.dependencies import get_project_manager
-from app.services.project_service import ProjectManager, ProjectNotFoundError
+from app.dependencies import ProjectServiceDep
+from app.repositories.project_repository import ProjectNotFoundError
 
 router = APIRouter()
-
-ProjectManagerDep = Annotated[ProjectManager, Depends(get_project_manager)]
 
 
 @router.websocket("/ws/{project_id}")
 async def project_updates(
     websocket: WebSocket,
     project_id: str,
-    manager: ProjectManagerDep,
+    service: ProjectServiceDep,
 ) -> None:
     try:
-        project = await manager.get_project(project_id)
+        project = await service.get_project(project_id)
     except ProjectNotFoundError:
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
     await websocket.accept()
 
-    try:
-        subscription = await manager.subscribe(project_id)
-    except ProjectNotFoundError:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
-        return
+    subscription = await service.notification_service.subscribe(project_id)
 
     snapshot = {
         "project_id": project.id,
@@ -54,4 +46,4 @@ async def project_updates(
     except WebSocketDisconnect:
         return
     finally:
-        await manager.unsubscribe(project_id, subscription.queue)
+        await service.notification_service.unsubscribe(project_id, subscription.queue)

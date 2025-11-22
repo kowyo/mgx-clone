@@ -9,7 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
 from app.database import init_db
 from app.routes import api_router, ws_router
-from app.services.project_service import project_manager
+from app.services.notification_service import NotificationService
+from app.services.task_service import TaskService
 
 load_dotenv()
 
@@ -18,12 +19,19 @@ load_dotenv()
 async def lifespan(app: FastAPI):
     # Initialize database
     await init_db()
-    await project_manager.startup()
-    app.state.project_manager = project_manager
+
+    # Initialize services
+    notification_service = NotificationService()
+    task_service = TaskService()
+
+    app.state.notification_service = notification_service
+    app.state.task_service = task_service
+
     try:
         yield
     finally:
-        await project_manager.shutdown()
+        await notification_service.shutdown()
+        await task_service.shutdown()
 
 
 def create_app() -> FastAPI:

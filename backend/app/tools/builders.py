@@ -11,23 +11,32 @@ from pathlib import Path
 from claude_agent_sdk import ClaudeAgentOptions
 
 
-def build_claude_options(project_root: Path, allowed_commands: list[str]) -> ClaudeAgentOptions:
+def build_claude_options(project_root: Path) -> ClaudeAgentOptions:
     """Build Claude Agent options with built-in tools.
-
-    Note: The `allowed_commands` parameter is kept for backward compatibility
-    but is no longer used since we rely on Claude's built-in Bash tool with
-    permission_mode="acceptEdits".
 
     Args:
         project_root: The project directory where Claude will operate.
-        allowed_commands: Unused (kept for compatibility).
 
     Returns:
         Configured ClaudeAgentOptions with built-in Read, Write, and Bash tools.
     """
     print(f"Project root for Claude Agent: {project_root}")
     return ClaudeAgentOptions(
-        allowed_tools=["Read", "Write", "Bash"],
+        allowed_tools=[
+            "Read",
+            "Write",
+            "Edit",
+            "Glob",
+            "Grep",
+            "Bash",
+            "BashOutput",
+            "KillShell",
+            "WebSearch",
+            "WebFetch",
+            "TodoWrite",
+            "Task",
+            "ExitPlanMode",
+        ],
         permission_mode="acceptEdits",
         cwd=str(project_root),
     )

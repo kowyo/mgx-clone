@@ -7,8 +7,6 @@ This package contains utilities for:
 - Path validation for serving assets (path_utils.py)
 - Exception types for tool operations (exceptions.py)
 
-Note: These modules are NOT used for Claude Agent SDK tools. We use built-in
-Claude tools (Read, Write, Bash) instead of custom MCP tools.
 """
 
 from .builders import build_claude_options
