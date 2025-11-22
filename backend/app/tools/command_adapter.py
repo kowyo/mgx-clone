@@ -34,9 +34,6 @@ class CommandAdapter:
     ) -> None:
         self._base_dir = base_dir.resolve()
 
-    def _validate_command(self, command: str) -> None:
-        pass
-
     def _resolve_cwd(self, relative_path: str | None) -> Path:
         if relative_path is None:
             return self._base_dir
@@ -51,7 +48,6 @@ class CommandAdapter:
         env: Mapping[str, str] | None = None,
         timeout: float | None = 120.0,
     ) -> CommandResult:
-        self._validate_command(command)
         working_dir = self._resolve_cwd(cwd)
         process_env = os.environ.copy()
         if env:
