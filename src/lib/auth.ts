@@ -1,5 +1,5 @@
 import { betterAuth } from "better-auth"
-import Database from "better-sqlite3"
+import Database from "bun:sqlite"
 import { jwt } from "better-auth/plugins"
 
 export const auth = betterAuth({

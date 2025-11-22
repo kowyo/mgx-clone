@@ -1,24 +1,18 @@
-FROM node:24-alpine AS base
-ENV PNPM_HOME="/pnpm"
-ENV PATH="$PNPM_HOME:$PATH"
+FROM oven/bun:1 AS base
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV CI=true
-RUN apk add --no-cache libc6-compat && \
-    corepack enable
 WORKDIR /app
 
 FROM base AS builder
 COPY . .
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile
-RUN npx @better-auth/cli migrate --yes
+RUN --mount=type=cache,id=bun,target=/root/.bun/install/cache \
+    bun install --frozen-lockfile
+RUN bunx --bun @better-auth/cli migrate --yes
 RUN --mount=type=cache,id=nextjs,target=/app/.next/cache \
-    pnpm run build
+    bun run build
 
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 COPY --from=builder /app/public ./public
@@ -34,4 +28,4 @@ EXPOSE 3000
 ENV PORT=3000
 
 ENV HOSTNAME="0.0.0.0"
-CMD ["node", "server.js"]
+CMD ["bun", "server.js"]
